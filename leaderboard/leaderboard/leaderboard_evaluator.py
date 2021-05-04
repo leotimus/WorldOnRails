@@ -24,19 +24,19 @@ import sys
 import carla
 import signal
 
-from srunner.scenariomanager.carla_data_provider import *
-from srunner.scenariomanager.timer import GameTime
-from srunner.scenariomanager.watchdog import Watchdog
+from scenario_runner.srunner.scenariomanager.carla_data_provider import *
+from scenario_runner.srunner.scenariomanager.timer import GameTime
+from scenario_runner.srunner.scenariomanager.watchdog import Watchdog
 
-from leaderboard.scenarios.scenario_manager import ScenarioManager
-from leaderboard.scenarios.route_scenario import RouteScenario
-from leaderboard.scenarios.train_scenario import TrainScenario
-from leaderboard.scenarios.nocrash_train_scenario import NoCrashTrainScenario
-from leaderboard.scenarios.nocrash_eval_scenario import NoCrashEvalScenario
-from leaderboard.envs.sensor_interface import SensorConfigurationInvalid
-from leaderboard.autoagents.agent_wrapper import  AgentWrapper, AgentError
-from leaderboard.utils.statistics_manager import StatisticsManager
-from leaderboard.utils.route_indexer import RouteIndexer
+from leaderboard.leaderboard.scenarios.scenario_manager import ScenarioManager
+from leaderboard.leaderboard.scenarios.route_scenario import RouteScenario
+from leaderboard.leaderboard.scenarios.train_scenario import TrainScenario
+from leaderboard.leaderboard.scenarios.nocrash_train_scenario import NoCrashTrainScenario
+from leaderboard.leaderboard.scenarios.nocrash_eval_scenario import NoCrashEvalScenario
+from leaderboard.leaderboard.envs.sensor_interface import SensorConfigurationInvalid
+from leaderboard.leaderboard.autoagents.agent_wrapper import  AgentWrapper, AgentError
+from leaderboard.leaderboard.utils.statistics_manager import StatisticsManager
+from leaderboard.leaderboard.utils.route_indexer import RouteIndexer
 
 
 sensors_to_icons = {

@@ -22,20 +22,20 @@ import carla
 from agents.navigation.local_planner import RoadOption
 
 # pylint: disable=line-too-long
-from srunner.scenarioconfigs.scenario_configuration import ScenarioConfiguration, ActorConfigurationData
+from scenario_runner.srunner.scenarioconfigs.scenario_configuration import ScenarioConfiguration, ActorConfigurationData
 # pylint: enable=line-too-long
-from srunner.scenariomanager.scenarioatomics.atomic_behaviors import Idle, ScenarioTriggerer
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenarios.basic_scenario import BasicScenario
-from srunner.scenarios.control_loss import ControlLoss
-from srunner.scenarios.follow_leading_vehicle import FollowLeadingVehicle
-from srunner.scenarios.object_crash_vehicle import DynamicObjectCrossing
-from srunner.scenarios.object_crash_intersection import VehicleTurningRoute
-from srunner.scenarios.other_leading_vehicle import OtherLeadingVehicle
-from srunner.scenarios.maneuver_opposite_direction import ManeuverOppositeDirection
-from srunner.scenarios.junction_crossing_route import SignalJunctionCrossingRoute, NoSignalJunctionCrossingRoute
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_behaviors import Idle, ScenarioTriggerer
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenarios.basic_scenario import BasicScenario
+from scenario_runner.srunner.scenarios.control_loss import ControlLoss
+from scenario_runner.srunner.scenarios.follow_leading_vehicle import FollowLeadingVehicle
+from scenario_runner.srunner.scenarios.object_crash_vehicle import DynamicObjectCrossing
+from scenario_runner.srunner.scenarios.object_crash_intersection import VehicleTurningRoute
+from scenario_runner.srunner.scenarios.other_leading_vehicle import OtherLeadingVehicle
+from scenario_runner.srunner.scenarios.maneuver_opposite_direction import ManeuverOppositeDirection
+from scenario_runner.srunner.scenarios.junction_crossing_route import SignalJunctionCrossingRoute, NoSignalJunctionCrossingRoute
 
-from srunner.scenariomanager.scenarioatomics.atomic_criteria import (CollisionTest,
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_criteria import (CollisionTest,
                                                                      InRouteTest,
                                                                      RouteCompletionTest,
                                                                      OutsideRouteLanesTest,
@@ -43,8 +43,8 @@ from srunner.scenariomanager.scenarioatomics.atomic_criteria import (CollisionTe
                                                                      RunningStopTest,
                                                                      ActorSpeedAboveThresholdTest)
 
-from leaderboard.utils.route_parser import RouteParser, TRIGGER_THRESHOLD, TRIGGER_ANGLE_THRESHOLD
-from leaderboard.utils.route_manipulation import interpolate_trajectory
+from leaderboard.leaderboard.utils.route_parser import RouteParser, TRIGGER_THRESHOLD, TRIGGER_ANGLE_THRESHOLD
+from leaderboard.leaderboard.utils.route_manipulation import interpolate_trajectory
 
 ROUTESCENARIO = ["RouteScenario"]
 

@@ -22,20 +22,20 @@ import py_trees
 
 import carla
 
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.scenarioatomics.atomic_behaviors import (ActorTransformSetter,
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_behaviors import (ActorTransformSetter,
                                                                       ActorDestroy,
                                                                       KeepVelocity,
                                                                       StopVehicle,
                                                                       WaypointFollower)
-from srunner.scenariomanager.scenarioatomics.atomic_criteria import CollisionTest
-from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import (InTriggerDistanceToVehicle,
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_criteria import CollisionTest
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import (InTriggerDistanceToVehicle,
                                                                                InTriggerDistanceToNextIntersection,
                                                                                DriveDistance,
                                                                                StandStill)
-from srunner.scenariomanager.timer import TimeOut
-from srunner.scenarios.basic_scenario import BasicScenario
-from srunner.tools.scenario_helper import get_waypoint_in_distance
+from scenario_runner.srunner.scenariomanager.timer import TimeOut
+from scenario_runner.srunner.scenarios.basic_scenario import BasicScenario
+from scenario_runner.srunner.tools.scenario_helper import get_waypoint_in_distance
 
 
 class FollowLeadingVehicle(BasicScenario):

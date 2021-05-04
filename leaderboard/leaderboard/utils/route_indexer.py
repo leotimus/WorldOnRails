@@ -3,11 +3,11 @@ from dictor import dictor
 
 import copy
 
-from srunner.scenarioconfigs.route_scenario_configuration import RouteScenarioConfiguration
+from scenario_runner.srunner.scenarioconfigs.route_scenario_configuration import RouteScenarioConfiguration
 
 
-from leaderboard.utils.route_parser import RouteParser
-from leaderboard.utils.checkpoint_tools import fetch_dict, create_default_json_msg, save_dict
+from leaderboard.leaderboard.utils.route_parser import RouteParser
+from leaderboard.leaderboard.utils.checkpoint_tools import fetch_dict, create_default_json_msg, save_dict
 
 
 class RouteIndexer():

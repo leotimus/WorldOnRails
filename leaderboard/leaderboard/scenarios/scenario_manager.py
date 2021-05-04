@@ -18,13 +18,13 @@ import time
 import py_trees
 import carla
 
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.timer import GameTime
-from srunner.scenariomanager.watchdog import Watchdog
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenariomanager.timer import GameTime
+from scenario_runner.srunner.scenariomanager.watchdog import Watchdog
 
-from leaderboard.autoagents.agent_wrapper import AgentWrapper, AgentError
-from leaderboard.envs.sensor_interface import SensorReceivedNoData
-from leaderboard.utils.result_writer import ResultOutputProvider
+from leaderboard.leaderboard.autoagents.agent_wrapper import AgentWrapper, AgentError
+from leaderboard.leaderboard.envs.sensor_interface import SensorReceivedNoData
+from leaderboard.leaderboard.utils.result_writer import ResultOutputProvider
 
 
 class ScenarioManager(object):

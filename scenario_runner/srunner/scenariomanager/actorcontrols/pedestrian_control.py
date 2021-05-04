@@ -13,7 +13,7 @@ import math
 
 import carla
 
-from srunner.scenariomanager.actorcontrols.basic_control import BasicControl
+from scenario_runner.srunner.scenariomanager.actorcontrols.basic_control import BasicControl
 
 
 class PedestrianControl(BasicControl):

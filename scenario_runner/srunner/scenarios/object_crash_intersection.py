@@ -16,18 +16,18 @@ import py_trees
 
 import carla
 
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.scenarioatomics.atomic_behaviors import (ActorTransformSetter,
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_behaviors import (ActorTransformSetter,
                                                                       ActorDestroy,
                                                                       KeepVelocity,
                                                                       HandBrakeVehicle)
-from srunner.scenariomanager.scenarioatomics.atomic_criteria import CollisionTest
-from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import (InTriggerDistanceToLocationAlongRoute,
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_criteria import CollisionTest
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import (InTriggerDistanceToLocationAlongRoute,
                                                                                InTriggerDistanceToVehicle,
                                                                                DriveDistance)
-from srunner.scenariomanager.timer import TimeOut
-from srunner.scenarios.basic_scenario import BasicScenario
-from srunner.tools.scenario_helper import generate_target_waypoint, generate_target_waypoint_in_route
+from scenario_runner.srunner.scenariomanager.timer import TimeOut
+from scenario_runner.srunner.scenarios.basic_scenario import BasicScenario
+from scenario_runner.srunner.tools.scenario_helper import generate_target_waypoint, generate_target_waypoint_in_route
 
 
 def get_opponent_transform(added_dist, waypoint, trigger_location):

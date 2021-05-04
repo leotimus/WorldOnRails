@@ -29,12 +29,12 @@ import carla
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 
-from srunner.scenariomanager.scenarioatomics.atomic_behaviors import calculate_distance
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.timer import GameTime
-from srunner.tools.scenario_helper import get_distance_along_route
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_behaviors import calculate_distance
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenariomanager.timer import GameTime
+from scenario_runner.srunner.tools.scenario_helper import get_distance_along_route
 
-import srunner.tools
+import scenario_runner.srunner.tools
 
 EPSILON = 0.001
 
@@ -195,7 +195,7 @@ class InTimeToArrivalToOSCPosition(AtomicCondition):
 
         # calculate transform with method in openscenario_parser.py
         try:
-            osc_transform = srunner.tools.openscenario_parser.OpenScenarioParser.convert_position_to_transform(
+            osc_transform = scenario_runner.srunner.tools.openscenario_parser.OpenScenarioParser.convert_position_to_transform(
                 self._osc_position)
         except AttributeError:
             return py_trees.common.Status.FAILURE

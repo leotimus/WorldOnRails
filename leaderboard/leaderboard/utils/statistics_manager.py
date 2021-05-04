@@ -15,9 +15,9 @@ from dictor import dictor
 import math
 import sys
 
-from srunner.scenariomanager.traffic_events import TrafficEventType
+from scenario_runner.srunner.scenariomanager.traffic_events import TrafficEventType
 
-from leaderboard.utils.checkpoint_tools import fetch_dict, save_dict, create_default_json_msg
+from leaderboard.leaderboard.utils.checkpoint_tools import fetch_dict, save_dict, create_default_json_msg
 
 PENALTY_COLLISION_PEDESTRIAN = 0.50
 PENALTY_COLLISION_VEHICLE = 0.60

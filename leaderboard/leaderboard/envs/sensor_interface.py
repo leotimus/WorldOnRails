@@ -11,8 +11,8 @@ from queue import Queue
 from queue import Empty
 
 import carla
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.timer import GameTime
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenariomanager.timer import GameTime
 
 from .map_utils import Wrapper as map_utils
 

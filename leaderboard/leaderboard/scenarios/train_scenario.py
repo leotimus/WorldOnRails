@@ -14,22 +14,22 @@ import py_trees
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 
-from srunner.scenarioconfigs.scenario_configuration import ScenarioConfiguration, ActorConfigurationData
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.weather_sim import WeatherBehavior
-from srunner.scenarios.basic_scenario import BasicScenario
-from srunner.scenariomanager.timer import GameTime
-from srunner.scenarios.control_loss import ControlLoss
-from srunner.scenarios.follow_leading_vehicle import FollowLeadingVehicle
-from srunner.scenarios.object_crash_vehicle import DynamicObjectCrossing
-from srunner.scenarios.object_crash_intersection import VehicleTurningRoute
-from srunner.scenarios.other_leading_vehicle import OtherLeadingVehicle
-from srunner.scenarios.maneuver_opposite_direction import ManeuverOppositeDirection
-from srunner.scenarios.junction_crossing_route import SignalJunctionCrossingRoute, NoSignalJunctionCrossingRoute
+from scenario_runner.srunner.scenarioconfigs.scenario_configuration import ScenarioConfiguration, ActorConfigurationData
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenariomanager.weather_sim import WeatherBehavior
+from scenario_runner.srunner.scenarios.basic_scenario import BasicScenario
+from scenario_runner.srunner.scenariomanager.timer import GameTime
+from scenario_runner.srunner.scenarios.control_loss import ControlLoss
+from scenario_runner.srunner.scenarios.follow_leading_vehicle import FollowLeadingVehicle
+from scenario_runner.srunner.scenarios.object_crash_vehicle import DynamicObjectCrossing
+from scenario_runner.srunner.scenarios.object_crash_intersection import VehicleTurningRoute
+from scenario_runner.srunner.scenarios.other_leading_vehicle import OtherLeadingVehicle
+from scenario_runner.srunner.scenarios.maneuver_opposite_direction import ManeuverOppositeDirection
+from scenario_runner.srunner.scenarios.junction_crossing_route import SignalJunctionCrossingRoute, NoSignalJunctionCrossingRoute
 
-from leaderboard.scenarios.route_scenario import RouteScenario, convert_transform_to_location, convert_json_to_transform, convert_json_to_transform, compare_scenarios
-from leaderboard.utils.route_manipulation import location_route_to_gps, _get_latlon_ref
-from leaderboard.utils.route_parser import RouteParser
+from leaderboard.leaderboard.scenarios.route_scenario import RouteScenario, convert_transform_to_location, convert_json_to_transform, convert_json_to_transform, compare_scenarios
+from leaderboard.leaderboard.utils.route_manipulation import location_route_to_gps, _get_latlon_ref
+from leaderboard.leaderboard.utils.route_parser import RouteParser
 
 
 TRAINSCENARIO = ["TrainScenario"]

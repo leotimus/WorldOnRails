@@ -1,7 +1,7 @@
 import ray
 from copy import deepcopy
-from leaderboard.leaderboard_evaluator import LeaderboardEvaluator
-from leaderboard.utils.statistics_manager import StatisticsManager
+from leaderboard.leaderboard.leaderboard_evaluator import LeaderboardEvaluator
+from leaderboard.leaderboard.utils.statistics_manager import StatisticsManager
 
 class ChallengeRunner():
     def __init__(self, args, scenario, route, port=1000, tm_port=1002, debug=False):

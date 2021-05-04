@@ -33,14 +33,14 @@ from agents.navigation.local_planner import RoadOption
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.actorcontrols.actor_control import ActorControl
-from srunner.scenariomanager.timer import GameTime
-from srunner.tools.scenario_helper import detect_lane_obstacle
-from srunner.tools.scenario_helper import generate_target_waypoint_list_multilane
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenariomanager.actorcontrols.actor_control import ActorControl
+from scenario_runner.srunner.scenariomanager.timer import GameTime
+from scenario_runner.srunner.tools.scenario_helper import detect_lane_obstacle
+from scenario_runner.srunner.tools.scenario_helper import generate_target_waypoint_list_multilane
 
 
-import srunner.tools
+import scenario_runner.srunner.tools
 
 EPSILON = 0.001
 
@@ -856,7 +856,7 @@ class ActorTransformSetterToOSCPosition(AtomicBehavior):
         new_status = py_trees.common.Status.RUNNING
 
         # calculate transform with method in openscenario_parser.py
-        self._osc_transform = srunner.tools.openscenario_parser.OpenScenarioParser.convert_position_to_transform(
+        self._osc_transform = scenario_runner.srunner.tools.openscenario_parser.OpenScenarioParser.convert_position_to_transform(
             self._osc_position)
         self._actor.set_transform(self._osc_transform)
 

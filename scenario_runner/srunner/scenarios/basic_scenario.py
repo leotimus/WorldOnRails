@@ -16,11 +16,11 @@ import py_trees
 
 import carla
 
-import srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions as conditions
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.timer import TimeOut
-from srunner.scenariomanager.weather_sim import WeatherBehavior
-from srunner.scenariomanager.scenarioatomics.atomic_behaviors import UpdateAllActorControls
+import scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions as conditions
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenariomanager.timer import TimeOut
+from scenario_runner.srunner.scenariomanager.weather_sim import WeatherBehavior
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_behaviors import UpdateAllActorControls
 
 
 class BasicScenario(object):

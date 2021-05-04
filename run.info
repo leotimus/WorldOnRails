@@ -1,0 +1,4 @@
+python evaluate.py --agent-config=[PATH TO CONFIG]
+python evaluate_nocrash.py --town={Town01,Town02} --weather={train, test} --agent-config=/home/dai.ha/data/worldonrails/nocrash/config_nocrash.yaml --resume
+python evaluate_nocrash.py --town=Town01 --weather=test --agent-config=/home/dai.ha/data/worldonrails/nocrash/config_nocrash.yaml --resume
+python evaluate_nocrash.py --town=Town01 --checkpoint=/home/dai.ha/data/worldonrails/nocrash/main_model_16.th --weather=test --agent-config=/home/dai.ha/data/worldonrails/nocrash/config_nocrash.yaml --resume

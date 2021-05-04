@@ -9,12 +9,12 @@ import py_trees
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 
-from srunner.scenarioconfigs.scenario_configuration import ScenarioConfiguration, ActorConfigurationData
-from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.weather_sim import WeatherBehavior
-from srunner.scenarios.basic_scenario import BasicScenario
-from srunner.scenariomanager.timer import GameTime
-from srunner.scenariomanager.scenarioatomics.atomic_criteria import (CollisionTest,
+from scenario_runner.srunner.scenarioconfigs.scenario_configuration import ScenarioConfiguration, ActorConfigurationData
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from scenario_runner.srunner.scenariomanager.weather_sim import WeatherBehavior
+from scenario_runner.srunner.scenarios.basic_scenario import BasicScenario
+from scenario_runner.srunner.scenariomanager.timer import GameTime
+from scenario_runner.srunner.scenariomanager.scenarioatomics.atomic_criteria import (CollisionTest,
                                                                      InRouteTest,
                                                                      RouteCompletionTest,
                                                                      OutsideRouteLanesTest,
@@ -22,9 +22,9 @@ from srunner.scenariomanager.scenarioatomics.atomic_criteria import (CollisionTe
                                                                      RunningStopTest,
                                                                      ActorSpeedAboveThresholdTest)
 
-from leaderboard.scenarios.route_scenario import convert_transform_to_location, convert_json_to_transform, convert_json_to_transform
-from leaderboard.utils.route_manipulation import location_route_to_gps, _get_latlon_ref
-from leaderboard.utils.route_parser import RouteParser
+from leaderboard.leaderboard.scenarios.route_scenario import convert_transform_to_location, convert_json_to_transform, convert_json_to_transform
+from leaderboard.leaderboard.utils.route_manipulation import location_route_to_gps, _get_latlon_ref
+from leaderboard.leaderboard.utils.route_parser import RouteParser
 from .route_scenario import RouteScenario
 
 WEATHERS = {

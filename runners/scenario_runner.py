@@ -1,7 +1,7 @@
 import ray
 from copy import deepcopy
-from leaderboard.leaderboard_evaluator import LeaderboardEvaluator
-from leaderboard.utils.statistics_manager import StatisticsManager
+from leaderboard.leaderboard.leaderboard_evaluator import LeaderboardEvaluator
+from leaderboard.leaderboard.utils.statistics_manager import StatisticsManager
 
 @ray.remote(num_cpus=1./8, num_gpus=1./4, max_restarts=100, max_task_retries=-1)
 class ScenarioRunner():

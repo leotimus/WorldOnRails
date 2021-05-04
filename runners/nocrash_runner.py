@@ -2,7 +2,7 @@ import os
 import csv
 import ray
 from copy import deepcopy
-from leaderboard.nocrash_evaluator import NoCrashEvaluator
+from leaderboard.leaderboard.nocrash_evaluator import NoCrashEvaluator
 
 class NoCrashEvalRunner():
     def __init__(self, args, town, weather, port=1000, tm_port=1002, debug=False):
