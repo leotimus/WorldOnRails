@@ -133,3 +133,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+.idea/
+/saved_model/leaderboard/*.th
+/saved_model/nocrash/*.th
