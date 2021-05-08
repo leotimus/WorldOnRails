@@ -326,6 +326,7 @@ class BellmanUpdater(object):
             
             Q = BellmanUpdater.compute_Q(delta_locs, delta_yaws, next_spds, V, waypoint_rew, stop_rew, free)
             V, _ = Q.max(dim=0)
+            print(f'Q={Q}, V={V}')
 
             if t > 0:
                 V = BellmanUpdater.shift(V, locs[t]-locs[t-1])

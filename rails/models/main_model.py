@@ -1,4 +1,5 @@
 import torch
+import time
 from torch import nn
 from common.resnet import resnet18, resnet34
 from common.normalize import Normalize
@@ -88,7 +89,9 @@ class CameraModel(nn.Module):
 
         assert (self.all_speeds and spd is None) or \
                (not self.all_speeds and spd is not None)
-        
+        # file = f'expirements/wire_rgb_{int(round(time.time() * 1000))}.pt'
+        # torch.save(wide_rgb, file)
+        # wide_rgb = torch.load(file)
         wide_embed = self.backbone_wide(self.normalize(wide_rgb/255.))
         if self.two_cam:
             narr_embed = self.backbone_narr(self.normalize(narr_rgb/255.))

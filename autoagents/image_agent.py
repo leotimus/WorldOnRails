@@ -7,11 +7,11 @@ import torch
 import wandb
 import carla
 import random
-import string
-
-from torch.distributions.categorical import Categorical
+import cv2, time
 
 from leaderboard.autoagents.autonomous_agent import AutonomousAgent, Track
+
+from agents.navigation.local_planner import RoadOption
 from utils import visualize_obs
 
 from rails.models import EgoModel, CameraModel
@@ -60,6 +60,8 @@ class ImageAgent(AutonomousAgent):
         self.lane_change_counter = 0
         self.stop_counter = 0
 
+        self.inputCamera = []
+
     def destroy(self):
         if len(self.vizs) == 0:
             return
@@ -74,6 +76,17 @@ class ImageAgent(AutonomousAgent):
         del self.image_model
     
     def flush_data(self):
+        print('log videos....')
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        video = cv2.VideoWriter(f'expirements/{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
+
+        for frame in self.inputCamera:
+            # img = cv2.imread(str(i) + '.png')
+            video.write(frame)
+
+        cv2.destroyAllWindows()
+        video.release()
+        self.inputCamera.clear()
 
         if self.log_wandb:
             wandb.log({
@@ -99,6 +112,9 @@ class ImageAgent(AutonomousAgent):
         
         _, wide_rgb = input_data.get(f'Wide_RGB')
         _, narr_rgb = input_data.get(f'Narrow_RGB')
+
+        # cv2.imwrite(f'expirements/rgb/{int(round(time.time() * 1000))}.png', wide_rgb)
+        self.inputCamera.append(wide_rgb)
 
         # Crop images
         _wide_rgb = wide_rgb[self.wide_crop_top:,:,:3]
@@ -155,8 +171,8 @@ class ImageAgent(AutonomousAgent):
         throt = float(self.throts @ torch.softmax(throt_logit, dim=0))
 
         steer, throt, brake = self.post_process(steer, throt, brake_prob, spd, cmd_value)
+        print(f'Command = {RoadOption(cmd_value).name}, steer = {steer}, throt = {throt}, brake = {brake}')
 
-        
         rgb = np.concatenate([wide_rgb, narr_rgb[...,:3]], axis=1)
         
         self.vizs.append(visualize_obs(rgb, 0, (steer, throt, brake), spd, cmd=cmd_value+1))

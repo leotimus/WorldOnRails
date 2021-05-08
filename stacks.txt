@@ -1,0 +1,47 @@
+T_destination = {TypeVar} ~T_destination
+act_head = {Sequential: 5} Sequential(\n  (0): Linear(in_features=512, out_features=256, bias=True)\n  (1): ReLU(inplace=True)\n  (2): Linear(in_features=256, out_features=256, bias=True)\n  (3): ReLU(inplace=True)\n  (4): Linear(in_features=256, out_features=312, bias=True)\n)
+all_speeds = {bool} True
+backbone_wide = {ResNet} ResNet(\n  (conv1): Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)\n  (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)\n  (relu): ReLU(inplace=True)\n  (maxpool): MaxPool2d(kernel_size=3, stri
+dump_patches = {bool} False
+normalize = {Normalize} Normalize()
+num_acts = {int} 312
+num_cmds = {int} 6
+num_labels = {int} 5
+num_speeds = {int} 4
+num_steers = {int} 9
+num_throts = {int} 3
+False
+tensor([[[[190., 190., 190.,  ..., 192., 189., 189.],
+          [190., 190., 190.,  ..., 189., 189., 186.],
+          [190., 190., 190.,  ..., 186., 186., 186.],
+          ...,
+          [203., 203., 203.,  ..., 174., 174., 171.],
+          [203., 203., 20
+tensor: (1,3,192,480)
+
+================ return from main_model.policy ===============
+policy, main_model.py:121
+run_step, image_agent.py:141
+__call__, autonomous_agent.py:115
+__call__, agent_wrapper.py:88
+_tick_scenario, scenario_manager.py:152
+run_scenario, scenario_manager.py:136
+_load_and_run_scenario, nocrash_evaluator.py:309
+run, nocrash_evaluator.py:379
+run, nocrash_runner.py:25
+main, evaluate_nocrash.py:11
+<module>, evaluate_nocrash.py:50
+===============================================================
+
+image_agent.run_step
+sample input:
+{
+    'GPS' = {tuple: 2} (19349, array([-5.01331986e-04,  1.03366277e-03,  2.43369856e+00]))
+    'EGO' = {tuple: 2} (19349, {'spd': 0.0, 'loc': [115.95875549316406, 55.55023956298828, 0.03370937332510948], 'rot': [-6.103513442212716e-05, -0.03348158672451973, -178.60079956054688]})
+    'COLLISION' = {tuple: 2} (19349, False)
+    'Wide_RGB' = {tuple: 2} (19349, array([[[132, 137, 146],\n        [132, 137, 146],\n        [131, 136, 144],\n        ...,\n        [130, 136, 145],\n        [130, 135, 144],\n        [130, 135, 144]],\n\n       [[132, 137, 146],\n        [132, 137, 146],\n        [132, 137, 146],\n
+    'Narrow_RGB' = {tuple: 2} (19349, array([[[170, 192, 209, 255],\n        [170, 192, 209, 255],\n        [170, 192, 209, 255],\n        ...,\n        [165, 186, 203, 255],\n        [165, 186, 203, 255],\n        [165, 186, 203, 255]],\n\n       [[170, 192, 208, 255],\n        [170, 192, 209,
+}
+
+Command = STRAIGHT, steer = 0, throt = 0, brake = 1
+wide1.pt
