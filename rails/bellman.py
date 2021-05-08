@@ -339,7 +339,6 @@ class BellmanUpdater(object):
         if visualize is not None:
             
             V_axes, Q_axis1, Q_axis2, rotate, buff = visualize
-            
             # One last max
             # V, _ = Q.max(dim=0)
             

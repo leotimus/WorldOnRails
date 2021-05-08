@@ -3,6 +3,7 @@ from torch import nn
 from common.resnet import resnet18, resnet34
 from common.normalize import Normalize
 from common.segmentation import SegmentationHead
+from rails.saliency_map import make_movie_carla_custom
 
 class CameraModel(nn.Module):
     def __init__(self, config, num_cmds=6):
@@ -50,7 +51,7 @@ class CameraModel(nn.Module):
         self.normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     def forward(self, wide_rgb, narr_rgb, spd=None):
-        
+        print("Forward")
         assert (self.all_speeds and spd is None) or \
                (not self.all_speeds and spd is not None)
 
@@ -75,7 +76,7 @@ class CameraModel(nn.Module):
         else:
             act_output = self.act_head(torch.cat([embed, self.spd_encoder(spd[:,None])], dim=1)).view(-1,self.num_cmds,1,self.num_steers+self.num_throts+1)
             act_output = action_logits(act_output, self.num_steers, self.num_throts).squeeze(2)
-
+        print("Output")
         if self.two_cam:
             return act_output, wide_seg_output, narr_seg_output
         else:
@@ -129,6 +130,22 @@ def action_logits(raw_logits, num_steers, num_throts):
     throt_logits = throt_logits.repeat_interleave(num_steers,-1)
     
     act_logits = torch.cat([steer_logits + throt_logits, brake_logits], dim=-1)
+
+    print("Single Logits")
+    print("Steer")
+    print(steer_logits)
+    print(".......................")
+    print("Throt")
+    print(throt_logits)
+    print(".......................")
+    print("Brake")
+    print(brake_logits)
+    print("__________________")
+
+    print("Act Logits")
+    print(act_logits)
+    print("____________")
+    #make_movie_carla_custom(steer_logits, throt_logits, brake_logits)
     
     return act_logits
 

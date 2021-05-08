@@ -28,3 +28,17 @@ dependencies:
       - six
       - wandb
       - xmlschema
+      - numpy
+      - scipy==1.1.0
+      - gym
+      - atari-py
+
+#From visualize_atari
+#      - numpy
+#      - scipy==1.1.0
+#      - matplotlib
+#      - torch==0.3.1
+#      - jupyter
+#      - gym
+#      - atari-py
+#      sudo apt install ffmpeg
