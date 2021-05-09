@@ -12,13 +12,19 @@ import cv2, time
 from leaderboard.autoagents.autonomous_agent import AutonomousAgent, Track
 
 from agents.navigation.local_planner import RoadOption
+from autoagents.image_agent_saliency import ImageAgentSaliency
 from utils import visualize_obs
 
 from rails.models import EgoModel, CameraModel
 from autoagents.waypointer import Waypointer
 
+from scipy.ndimage.filters import gaussian_filter
+from scipy.misc import imresize
+
+
 def get_entry_point():
     return 'ImageAgent'
+
 
 class ImageAgent(AutonomousAgent):
     
@@ -61,6 +67,7 @@ class ImageAgent(AutonomousAgent):
         self.stop_counter = 0
 
         self.inputCamera = []
+        self.Ls = []
 
     def destroy(self):
         if len(self.vizs) == 0:
@@ -74,19 +81,86 @@ class ImageAgent(AutonomousAgent):
         
         del self.waypointer
         del self.image_model
-    
-    def flush_data(self):
-        print('log videos....')
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
+    def create_masking(self, wide_rgb, center, size, radius):
+        # prepro = lambda img: imresize(img[35:195].mean(2), (80, 80)).astype(np.float32).reshape(1, 80, 80)
+        mask = self.get_mask(center, size, radius)
+        occlude = lambda I, mask: I * (1 - mask) + gaussian_filter(I, sigma=3) * mask
+        im = occlude(wide_rgb.squeeze(), mask).reshape(3, 480, 240)
+        return im
+
+    def get_mask(self, center, size, radius):
+        y, x = np.ogrid[-center[0]:size[0] - center[0], -center[1]:size[1] - center[1]]
+        keep = x * x + y * y <= 1
+        mask = np.zeros(size)
+        mask[keep] = 1  # select a circle of pixels
+        mask = gaussian_filter(mask, sigma=radius)  # blur the circle of pixels. this is a 2D Gaussian for r=r^2=1
+        return mask / mask.max()
+
+    def score_frame(self, saliencyInfo, density=5, radius=5):
+        # r: radius of blur
+        # d: density of scores (if d==1, then get a score for every pixel...
+        #    if d==2 then every other, which is 25% of total pixels for a 2D image)
+
+        wide_rgb = saliencyInfo.wide_rgb
+        steer_Logits = saliencyInfo.steer_logits
+        throt_Logits = saliencyInfo.throt_logits
+        brake_Logits = saliencyInfo.brake_logits
+        cmd_value = saliencyInfo.cmd_value
+
+        scores = np.zeros((int(480 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
+        for i in range(0, 480, density):
+            for j in range(0, 240, density):
+                masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[480, 240], radius=radius)
+                steer_logits, throt_logits, brake_logits = self.image_model.policy(masking_wide_rgp, None, cmd_value)
+                scores[int(i / wide_rgb), int(j / wide_rgb)] = (brake_Logits - brake_logits).pow(2).sum().mul_(.5).data[0]
+        pmax = scores.max()
+        scores = imresize(scores, size=[480, 240], interp='bilinear').astype(np.float32)
+        return pmax * scores / scores.max()
+
+    def apply_saliency(self, saliency, frame, fudge_factor=400, channel=2, sigma=0):
+        # sometimes saliency maps are a bit clearer if you blur them
+        # slightly...sigma adjusts the radius of that blur
+        pmax = saliency.max()
+        S = imresize(saliency, size=[480, 240], interp='bilinear').astype(np.float32)
+        S = S if sigma == 0 else gaussian_filter(S, sigma=sigma)
+        S -= S.min()
+        S = fudge_factor * pmax * S / S.max()
+        I = frame.astype('uint16')
+        I[35:195, :, channel] += S.astype('uint16')
+        I = I.clip(1, 255).astype('uint8')
+        return I
+
+    def saveSaliencyVideo(self, Ls):
+        try:
+            print('log videos....')
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            video = cv2.VideoWriter(f'expirements/saliency_{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
+            # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
+
+            for saliencyInfo in Ls:
+                saliency = self.score_frame(saliencyInfo)
+                img = self.apply_saliency(saliency, saliencyInfo.wide_rgb)
+                video.write(img)
+
+            cv2.destroyAllWindows()
+            video.release()
+            Ls.clear()
+        except:
+            print('false to save saliency video')
+
+    def save_input_sensor_video(self):
+        fourcc = cv2.VideoWriter_fourcc(*'mp4')
         video = cv2.VideoWriter(f'expirements/{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
-
         for frame in self.inputCamera:
-            # img = cv2.imread(str(i) + '.png')
             video.write(frame)
-
         cv2.destroyAllWindows()
         video.release()
         self.inputCamera.clear()
+
+    def flush_data(self):
+        # self.save_input_sensor_video()
+        self.saveSaliencyVideo(self.Ls)
 
         if self.log_wandb:
             wandb.log({
@@ -114,7 +188,7 @@ class ImageAgent(AutonomousAgent):
         _, narr_rgb = input_data.get(f'Narrow_RGB')
 
         # cv2.imwrite(f'expirements/rgb/{int(round(time.time() * 1000))}.png', wide_rgb)
-        self.inputCamera.append(wide_rgb)
+        # self.inputCamera.append(wide_rgb)
 
         # Crop images
         _wide_rgb = wide_rgb[self.wide_crop_top:,:,:3]
@@ -155,6 +229,8 @@ class ImageAgent(AutonomousAgent):
         
         if self.all_speeds:
             steer_logits, throt_logits, brake_logits = self.image_model.policy(_wide_rgb, _narr_rgb, cmd_value)
+            ias = ImageAgentSaliency(wide_rgb, cmd_value, steer_logits, throt_logits, brake_logits)
+            self.Ls.append(ias)
             # Interpolate logits
             steer_logit = self._lerp(steer_logits, spd)
             throt_logit = self._lerp(throt_logits, spd)
@@ -171,7 +247,7 @@ class ImageAgent(AutonomousAgent):
         throt = float(self.throts @ torch.softmax(throt_logit, dim=0))
 
         steer, throt, brake = self.post_process(steer, throt, brake_prob, spd, cmd_value)
-        print(f'Command = {RoadOption(cmd_value).name}, steer = {steer}, throt = {throt}, brake = {brake}')
+        # print(f'Command = {RoadOption(cmd_value).name}, steer = {steer}, throt = {throt}, brake = {brake}')
 
         rgb = np.concatenate([wide_rgb, narr_rgb[...,:3]], axis=1)
         
@@ -230,7 +306,8 @@ class ImageAgent(AutonomousAgent):
         #     steer = min(max(steer, -0.4), 0.4) # no crazy steerings when lane changing
 
         return steer, throt, brake
-    
+
+
 def load_state_dict(model, path):
 
     from collections import OrderedDict
