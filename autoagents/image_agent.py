@@ -110,14 +110,26 @@ class ImageAgent(AutonomousAgent):
         brake_Logits = saliencyInfo.brake_logits
         cmd_value = saliencyInfo.cmd_value
 
-        scores = np.zeros((int(480 / density) + 1, int(240 / density) + 1, int(3/ density) + 1))  # saliency scores S(t,i,j)
+        scores = np.zeros((int(480 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
         for i in range(0, 480, density):
             for j in range(0, 240, density):
-                    masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240,  480], radius=radius)
-                    masking_wide_rgp = skimage.color.gray2rgb(masking_wide_rgp)
-                    print(masking_wide_rgp) #All values still normalize
-                    steer_logits, throt_logits, brake_logits = self.image_model.policy(masking_wide_rgp, None, cmd_value)
-                    scores[int(i / wide_rgb), int(j / wide_rgb)] = (brake_Logits - brake_logits).pow(2).sum().mul_(.5).data[0]
+                masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240,  480], radius=radius)
+                masking_wide_rgp = skimage.color.gray2rgb(masking_wide_rgp)
+
+                #print(masking_wide_rgp) #All values still normalize
+
+                _masking_wide_rgp = masking_wide_rgp[self.wide_crop_top:, :, :3]
+                _masking_wide_rgp = _masking_wide_rgp[..., ::-1].copy()
+                _masking_wide_rgp = torch.tensor(_masking_wide_rgp[None]).float().permute(0, 3, 1, 2).to(self.device)
+
+                steer_logits, throt_logits, brake_logits = self.image_model.policy(_masking_wide_rgp, None, cmd_value)
+
+                x = int(i / density)
+                y = int(j / density)
+                scores[x, y] = (brake_Logits - brake_logits).pow(2).sum().mul_(.5)
+                # print(f'score at {x}:{y}: {scores[x, y]}')
+
+
         pmax = scores.max()
         scores = imresize(scores, size=[480, 240], interp='bilinear').astype(np.float32)
         return pmax * scores / scores.max()
@@ -131,7 +143,7 @@ class ImageAgent(AutonomousAgent):
         S -= S.min()
         S = fudge_factor * pmax * S / S.max()
         I = frame.astype('uint16')
-        #I[35:195, :, channel] += S.astype('uint16')
+        I[35:195, :, channel] += S.astype('uint16')
         I = I.clip(1, 255).astype('uint8')
         return I
 
@@ -198,10 +210,12 @@ class ImageAgent(AutonomousAgent):
 
         # Crop images
         _wide_rgb = wide_rgb[self.wide_crop_top:,:,:3]
-        _narr_rgb = narr_rgb[:-self.narr_crop_bottom,:,:3]
+        _wide_rgb = _wide_rgb[..., ::-1].copy()
+        _wide_rgb = torch.tensor(_wide_rgb[None]).float().permute(0, 3, 1, 2).to(self.device)
 
-        _wide_rgb = _wide_rgb[...,::-1].copy()
+        _narr_rgb = narr_rgb[:-self.narr_crop_bottom,:,:3]
         _narr_rgb = _narr_rgb[...,::-1].copy()
+        _narr_rgb = torch.tensor(_narr_rgb[None]).float().permute(0, 3, 1, 2).to(self.device)
 
         _, ego = input_data.get('EGO')
         _, gps = input_data.get('GPS')
@@ -230,9 +244,8 @@ class ImageAgent(AutonomousAgent):
         if cmd_value == self.lane_changed:
             cmd_value = 3
 
-        _wide_rgb = torch.tensor(_wide_rgb[None]).float().permute(0,3,1,2).to(self.device)
-        _narr_rgb = torch.tensor(_narr_rgb[None]).float().permute(0,3,1,2).to(self.device)
-        
+
+
         if self.all_speeds:
             steer_logits, throt_logits, brake_logits = self.image_model.policy(_wide_rgb, _narr_rgb, cmd_value)
             ias = ImageAgentSaliency(wide_rgb, cmd_value, steer_logits, throt_logits, brake_logits)
@@ -265,7 +278,7 @@ class ImageAgent(AutonomousAgent):
         self.num_frames += 1
 
         return carla.VehicleControl(steer=steer, throttle=throt, brake=brake)
-    
+
     def _lerp(self, v, x):
         D = v.shape[0]
 
