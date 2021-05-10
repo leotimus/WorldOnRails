@@ -1,6 +1,21 @@
 from autoagents.image_agent import ImageAgent
 import torch
 
-imageAgent = ImageAgent('/home/demo/Downloads/WorldOnRails/saved_model/nocrash/config_nocrash.yaml')
-Ls = torch.load('experiments/flush_1620568574409.data')
-imageAgent.saveSaliencyVideo(Ls)
+
+def split_data(start_index, n):
+    Ls = torch.load('experiments/flush_1620568574409.data')
+    data = []
+    for i in range(n):
+        data.append(Ls[start_index + i])
+    torch.save(data, f'experiments/flush_1620568574409_{start_index}_{n}.data')
+
+
+def run_all(config, data):
+    imageAgent = ImageAgent(config)
+    Ls = torch.load(data)
+    imageAgent.saveSaliencyVideo(Ls)
+
+
+if __name__ == '__main__':
+    # split_data(200, 240)
+    run_all('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_200_240.data')

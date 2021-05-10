@@ -8,6 +8,7 @@ import wandb
 import carla
 import random
 import cv2, time
+import traceback
 
 from leaderboard.autoagents.autonomous_agent import AutonomousAgent, Track
 
@@ -29,11 +30,11 @@ def get_entry_point():
 
 
 class ImageAgent(AutonomousAgent):
-    
+
     """
     Trained image agent
     """
-    
+
     def setup(self, path_to_conf_file):
         """
         Setup the agent parameters
@@ -60,7 +61,7 @@ class ImageAgent(AutonomousAgent):
 
         if self.log_wandb:
             wandb.init(project='carla_evaluate')
-            
+
         self.steers = torch.tensor(np.linspace(-self.max_steers,self.max_steers,self.num_steers)).float().to(self.device)
         self.throts = torch.tensor(np.linspace(0,self.max_throts,self.num_throts)).float().to(self.device)
 
@@ -80,12 +81,11 @@ class ImageAgent(AutonomousAgent):
         self.lane_change_counter = 0
         self.stop_counter = 0
         self.lane_changed = None
-        
+
         del self.waypointer
         del self.image_model
 
     def create_masking(self, wide_rgb, center, size, radius):
-        # prepro = lambda img: imresize(img[35:195].mean(2), (80, 80)).astype(np.float32).reshape(1, 80, 80)
         mask = self.get_mask(center, size, radius)
         occlude = lambda I, mask: I * (1 - mask) + gaussian_filter(I, sigma=3) * mask
         im = occlude(wide_rgb.squeeze(), mask).reshape(240, 480)#(3, 480, 240) --> ValueError: operands could not be broadcast together with shapes (240,480,3) (480,240)
@@ -110,9 +110,9 @@ class ImageAgent(AutonomousAgent):
         brake_Logits = saliencyInfo.brake_logits
         cmd_value = saliencyInfo.cmd_value
 
-        scores = np.zeros((int(480 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
-        for i in range(0, 480, density):
-            for j in range(0, 240, density):
+        scores = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
+        for i in range(0, 240, density):
+            for j in range(0, 480, density):
                 masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240,  480], radius=radius)
                 masking_wide_rgp = skimage.color.gray2rgb(masking_wide_rgp)
 
@@ -131,42 +131,39 @@ class ImageAgent(AutonomousAgent):
 
 
         pmax = scores.max()
-        scores = imresize(scores, size=[240,  480], interp='bilinear').astype(np.float32)
+        scores = imresize(scores, size=[240, 480], interp='bilinear').astype(np.float32)
         return pmax * scores / scores.max()
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=2, sigma=0):
         # sometimes saliency maps are a bit clearer if you blur them
         # slightly...sigma adjusts the radius of that blur
         pmax = saliency.max()
-        S = imresize(saliency, size=[240,  480], interp='bilinear').astype(np.float32)
+        S = imresize(saliency, size=[240, 480], interp='bilinear').astype(np.float32)
         S = S if sigma == 0 else gaussian_filter(S, sigma=sigma)
         S -= S.min()
         S = fudge_factor * pmax * S / S.max()
         I = frame.astype('uint16')
-        print(I)
         I[:, :, channel] += S.astype('uint16')
         I = I.clip(1, 255).astype('uint8')
         return I
 
     def saveSaliencyVideo(self, Ls):
-        #try:
-        print('log videos....')
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video = cv2.VideoWriter(f'experiments/saliency_{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
-        # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
+        try:
+            print('log videos....')
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            video = cv2.VideoWriter(f'experiments/saliency_{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
+            # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
 
-        for saliencyInfo in Ls:
-            print(saliencyInfo.wide_rgb)
-            print(saliencyInfo.wide_rgb.squeeze())
-            saliency = self.score_frame(saliencyInfo)
-            img = self.apply_saliency(saliency, saliencyInfo.wide_rgb)
-            video.write(img)
+            for saliencyInfo in Ls:
+                saliency = self.score_frame(saliencyInfo)
+                img = self.apply_saliency(saliency, saliencyInfo.wide_rgb)
+                video.write(img)
 
-        cv2.destroyAllWindows()
-        video.release()
-        Ls.clear()
-        #except Exception as e:
-           # print(e)
+            cv2.destroyAllWindows()
+            video.release()
+            Ls.clear()
+        except:
+           traceback.print_exc()
 
     def save_input_sensor_video(self):
         fourcc = cv2.VideoWriter_fourcc(*'mp4')
@@ -185,7 +182,7 @@ class ImageAgent(AutonomousAgent):
             wandb.log({
                 'vid': wandb.Video(np.stack(self.vizs).transpose((0,3,1,2)), fps=20, format='mp4')
             })
-            
+
         self.vizs.clear()
 
     def sensors(self):
@@ -198,11 +195,11 @@ class ImageAgent(AutonomousAgent):
             {'type': 'sensor.camera.rgb', 'x': self.camera_x, 'y': 0, 'z': self.camera_z, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
             'width': 384, 'height': 240, 'fov': 50, 'id': f'Narrow_RGB'},
         ]
-        
+
         return sensors
 
     def run_step(self, input_data, timestamp):
-        
+
         _, wide_rgb = input_data.get(f'Wide_RGB')
         _, narr_rgb = input_data.get(f'Narrow_RGB')
 
@@ -228,7 +225,7 @@ class ImageAgent(AutonomousAgent):
         _, _, cmd = self.waypointer.tick(gps)
 
         spd = ego.get('spd')
-        
+
         cmd_value = cmd.value-1
         cmd_value = 3 if cmd_value < 0 else cmd_value
 
@@ -258,7 +255,7 @@ class ImageAgent(AutonomousAgent):
         else:
             steer_logit, throt_logit, brake_logit = self.image_model.policy(_wide_rgb, _narr_rgb, cmd_value, spd=torch.tensor([spd]).float().to(self.device))
 
-        
+
         action_prob = self.action_prob(steer_logit, throt_logit, brake_logit)
 
         brake_prob = float(action_prob[-1])
@@ -270,7 +267,7 @@ class ImageAgent(AutonomousAgent):
         # print(f'Command = {RoadOption(cmd_value).name}, steer = {steer}, throt = {throt}, brake = {brake}')
 
         rgb = np.concatenate([wide_rgb, narr_rgb[...,:3]], axis=1)
-        
+
         self.vizs.append(visualize_obs(rgb, 0, (steer, throt, brake), spd, cmd=cmd_value+1))
 
         if len(self.vizs) > 1000:
@@ -303,7 +300,7 @@ class ImageAgent(AutonomousAgent):
         return torch.softmax(action_logit, dim=0)
 
     def post_process(self, steer, throt, brake_prob, spd, cmd):
-        
+
         if brake_prob > 0.5:
             steer, throt, brake = 0, 0, 1
         else:
@@ -333,9 +330,9 @@ def load_state_dict(model, path):
     from collections import OrderedDict
     new_state_dict = OrderedDict()
     state_dict = torch.load(path)
-    
+
     for k, v in state_dict.items():
         name = k[7:] # remove `module.`
         new_state_dict[name] = v
-    
+
     model.load_state_dict(new_state_dict)
