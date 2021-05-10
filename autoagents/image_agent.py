@@ -131,19 +131,20 @@ class ImageAgent(AutonomousAgent):
 
 
         pmax = scores.max()
-        scores = imresize(scores, size=[480, 240], interp='bilinear').astype(np.float32)
+        scores = imresize(scores, size=[240,  480], interp='bilinear').astype(np.float32)
         return pmax * scores / scores.max()
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=2, sigma=0):
         # sometimes saliency maps are a bit clearer if you blur them
         # slightly...sigma adjusts the radius of that blur
         pmax = saliency.max()
-        S = imresize(saliency, size=[480, 240], interp='bilinear').astype(np.float32)
+        S = imresize(saliency, size=[240,  480], interp='bilinear').astype(np.float32)
         S = S if sigma == 0 else gaussian_filter(S, sigma=sigma)
         S -= S.min()
         S = fudge_factor * pmax * S / S.max()
         I = frame.astype('uint16')
-        I[35:195, :, channel] += S.astype('uint16')
+        print(I)
+        I[:, :, channel] += S.astype('uint16')
         I = I.clip(1, 255).astype('uint8')
         return I
 
