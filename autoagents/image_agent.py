@@ -20,7 +20,9 @@ from autoagents.waypointer import Waypointer
 
 from scipy.ndimage.filters import gaussian_filter
 from scipy.misc import imresize
-
+import skimage
+import skimage.io
+from skimage.util import img_as_float
 
 def get_entry_point():
     return 'ImageAgent'
@@ -86,7 +88,7 @@ class ImageAgent(AutonomousAgent):
         # prepro = lambda img: imresize(img[35:195].mean(2), (80, 80)).astype(np.float32).reshape(1, 80, 80)
         mask = self.get_mask(center, size, radius)
         occlude = lambda I, mask: I * (1 - mask) + gaussian_filter(I, sigma=3) * mask
-        im = occlude(wide_rgb.squeeze(), mask).reshape(3, 480, 240)
+        im = occlude(wide_rgb.squeeze(), mask).reshape(240, 480)#(3, 480, 240) --> ValueError: operands could not be broadcast together with shapes (240,480,3) (480,240)
         return im
 
     def get_mask(self, center, size, radius):
@@ -102,18 +104,20 @@ class ImageAgent(AutonomousAgent):
         # d: density of scores (if d==1, then get a score for every pixel...
         #    if d==2 then every other, which is 25% of total pixels for a 2D image)
 
-        wide_rgb = saliencyInfo.wide_rgb
+        wide_rgb = img_as_float(skimage.color.rgb2gray(saliencyInfo.wide_rgb))#Converting to gray picture to be normalize and 2d arrau
         steer_Logits = saliencyInfo.steer_logits
         throt_Logits = saliencyInfo.throt_logits
         brake_Logits = saliencyInfo.brake_logits
         cmd_value = saliencyInfo.cmd_value
 
-        scores = np.zeros((int(480 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
+        scores = np.zeros((int(480 / density) + 1, int(240 / density) + 1, int(3/ density) + 1))  # saliency scores S(t,i,j)
         for i in range(0, 480, density):
             for j in range(0, 240, density):
-                masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[480, 240], radius=radius)
-                steer_logits, throt_logits, brake_logits = self.image_model.policy(masking_wide_rgp, None, cmd_value)
-                scores[int(i / wide_rgb), int(j / wide_rgb)] = (brake_Logits - brake_logits).pow(2).sum().mul_(.5).data[0]
+                    masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240,  480], radius=radius)
+                    masking_wide_rgp = skimage.color.gray2rgb(masking_wide_rgp)
+                    print(masking_wide_rgp) #All values still normalize
+                    steer_logits, throt_logits, brake_logits = self.image_model.policy(masking_wide_rgp, None, cmd_value)
+                    scores[int(i / wide_rgb), int(j / wide_rgb)] = (brake_Logits - brake_logits).pow(2).sum().mul_(.5).data[0]
         pmax = scores.max()
         scores = imresize(scores, size=[480, 240], interp='bilinear').astype(np.float32)
         return pmax * scores / scores.max()
@@ -127,27 +131,29 @@ class ImageAgent(AutonomousAgent):
         S -= S.min()
         S = fudge_factor * pmax * S / S.max()
         I = frame.astype('uint16')
-        I[35:195, :, channel] += S.astype('uint16')
+        #I[35:195, :, channel] += S.astype('uint16')
         I = I.clip(1, 255).astype('uint8')
         return I
 
     def saveSaliencyVideo(self, Ls):
-        try:
-            print('log videos....')
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            video = cv2.VideoWriter(f'expirements/saliency_{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
-            # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
+        #try:
+        print('log videos....')
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        video = cv2.VideoWriter(f'experiments/saliency_{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
+        # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
 
-            for saliencyInfo in Ls:
-                saliency = self.score_frame(saliencyInfo)
-                img = self.apply_saliency(saliency, saliencyInfo.wide_rgb)
-                video.write(img)
+        for saliencyInfo in Ls:
+            print(saliencyInfo.wide_rgb)
+            print(saliencyInfo.wide_rgb.squeeze())
+            saliency = self.score_frame(saliencyInfo)
+            img = self.apply_saliency(saliency, saliencyInfo.wide_rgb)
+            video.write(img)
 
-            cv2.destroyAllWindows()
-            video.release()
-            Ls.clear()
-        except:
-            print('false to save saliency video')
+        cv2.destroyAllWindows()
+        video.release()
+        Ls.clear()
+        #except Exception as e:
+           # print(e)
 
     def save_input_sensor_video(self):
         fourcc = cv2.VideoWriter_fourcc(*'mp4')

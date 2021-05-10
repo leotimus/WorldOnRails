@@ -29,3 +29,4 @@ dependencies:
       - six
       - wandb
       - xmlschema
+      - scikit-image

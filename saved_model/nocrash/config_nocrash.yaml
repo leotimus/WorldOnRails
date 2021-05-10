@@ -34,5 +34,5 @@ multi_cam: True
 all_speeds: True
 ego_model_dir: 
 ego_data_dir: 
-main_model_dir: /home/dai.ha/data/worldonrails/WorldOnRails/saved_model/nocrash/main_model_16.th
+main_model_dir: /home/demo/Downloads/WorldOnRails/saved_model/nocrash/main_model_16.th
 main_data_dir:

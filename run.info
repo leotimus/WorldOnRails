@@ -1,3 +1,4 @@
+export TMPDIR=<new drive/tmp>
 python evaluate.py --agent-config=[PATH TO CONFIG]
 python evaluate_nocrash.py --town={Town01,Town02} --weather={train, test} --agent-config=/home/dai.ha/data/worldonrails/nocrash/config_nocrash.yaml --resume
 python evaluate_nocrash.py --town=Town01 --weather=test --agent-config=/home/dai.ha/data/worldonrails/nocrash/config_nocrash.yaml --resume
