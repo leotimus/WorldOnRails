@@ -1,7 +1,7 @@
 from autoagents.image_agent import ImageAgent
 import torch
 
-
+# split input into smaller sublist, one input might contain 1001 entries
 def split_data(start_index, n):
     Ls = torch.load('experiments/flush_1620568574409.data')
     data = []

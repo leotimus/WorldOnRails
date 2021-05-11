@@ -1,5 +1,6 @@
-import os
-import math
+import os, math
+from functools import partial
+
 import yaml
 import lmdb
 import numpy as np
@@ -9,6 +10,8 @@ import carla
 import random
 import cv2, time
 import traceback
+from multiprocessing.pool import ThreadPool
+from itertools import repeat
 
 from leaderboard.autoagents.autonomous_agent import AutonomousAgent, Track
 
