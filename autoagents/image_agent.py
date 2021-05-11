@@ -25,7 +25,6 @@ from scipy.misc import imresize
 def get_entry_point():
     return 'ImageAgent'
 
-
 class ImageAgent(AutonomousAgent):
     
     """
