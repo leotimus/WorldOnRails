@@ -29,6 +29,12 @@ def get_entry_point():
     return 'ImageAgent'
 
 
+def create_and_save_saliency(image_agent, video, info):
+    saliency = image_agent.score_frame(info)
+    img = image_agent.apply_saliency(saliency, info.wide_rgb)
+    video.write(img)
+
+
 class ImageAgent(AutonomousAgent):
 
     """
@@ -154,10 +160,11 @@ class ImageAgent(AutonomousAgent):
             video = cv2.VideoWriter(f'experiments/saliency_{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
             # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
 
-            for saliencyInfo in Ls:
-                saliency = self.score_frame(saliencyInfo)
-                img = self.apply_saliency(saliency, saliencyInfo.wide_rgb)
-                video.write(img)
+            pool = ThreadPool(processes=4)
+            pool.starmap(create_and_save_saliency, zip(repeat(self), repeat(video), Ls))
+            pool.close()
+            pool.terminate()
+            pool.join()
 
             cv2.destroyAllWindows()
             video.release()

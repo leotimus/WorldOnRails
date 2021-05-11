@@ -17,5 +17,5 @@ def run_all(config, data):
 
 
 if __name__ == '__main__':
-    # split_data(200, 240)
-    run_all('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_200_240.data')
+    # split_data(200, 60)
+    run_all('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_200_60.data')
