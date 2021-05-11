@@ -163,7 +163,7 @@ class ImageAgent(AutonomousAgent):
             video = cv2.VideoWriter(f'experiments/saliency_{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
             # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
 
-            pool = ThreadPool(processes=4)
+            pool = ThreadPool(processes=8)
             pool.starmap(create_and_save_saliency, zip(repeat(self), repeat(video), Ls))
             pool.close()
             pool.terminate()
