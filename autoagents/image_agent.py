@@ -1,6 +1,7 @@
 import os, math
 from functools import partial
-
+import pytz
+from datetime import datetime
 import yaml
 import lmdb
 import numpy as np
@@ -26,7 +27,7 @@ from scipy.ndimage.filters import gaussian_filter
 from scipy.misc import imresize
 import skimage
 import skimage.io
-from skimage.util import img_as_float
+from skimage.util import img_as_float, img_as_ubyte
 
 def get_entry_point():
     return 'ImageAgent'
@@ -34,7 +35,9 @@ def get_entry_point():
 
 def create_and_save_saliency(image_agent, video, info):
     saliency = image_agent.score_frame(info)
-    img = image_agent.apply_saliency(saliency, info.wide_rgb)
+    orig_img = info.wide_rgb
+    img = image_agent.apply_saliency(saliency, info.wide_rgb, channel=2)
+    print(img)
     video.write(img)
 
 
@@ -124,30 +127,32 @@ class ImageAgent(AutonomousAgent):
             for j in range(0, 480, density):
                 masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240,  480], radius=radius)
                 masking_wide_rgp = skimage.color.gray2rgb(masking_wide_rgp)
+                masking_wide_rgp = img_as_ubyte(masking_wide_rgp)
 
                 #print(masking_wide_rgp) #All values still normalize
 
                 _masking_wide_rgp = masking_wide_rgp[self.wide_crop_top:, :, :3]
                 _masking_wide_rgp = _masking_wide_rgp[..., ::-1].copy()
                 _masking_wide_rgp = torch.tensor(_masking_wide_rgp[None]).float().permute(0, 3, 1, 2).to(self.device)
-
                 steer_logits, throt_logits, brake_logits = self.image_model.policy(_masking_wide_rgp, None, cmd_value)
 
                 x = int(i / density)
                 y = int(j / density)
-                scores[x, y] = (brake_Logits - brake_logits).pow(2).sum().mul_(.5)
+                current_score = (brake_Logits - brake_logits).pow(2).sum().mul_(.5)
+                scores[x, y] = current_score
                 # print(f'score at {x}:{y}: {scores[x, y]}')
 
 
         pmax = scores.max()
         scores = imresize(scores, size=[240, 480], interp='bilinear').astype(np.float32)
-        return pmax * scores / scores.max()
+        res = pmax * scores / scores.max()
+        return res
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=2, sigma=0):
         # sometimes saliency maps are a bit clearer if you blur them
         # slightly...sigma adjusts the radius of that blur
         pmax = saliency.max()
-        S = imresize(saliency, size=[240, 480], interp='bilinear').astype(np.float32)
+        S = imresize(saliency, size=[240, 480], interp='bilinear').astype(np.float32)#Double it like in origian;
         S = S if sigma == 0 else gaussian_filter(S, sigma=sigma)
         S -= S.min()
         S = fudge_factor * pmax * S / S.max()
@@ -159,8 +164,11 @@ class ImageAgent(AutonomousAgent):
     def saveSaliencyVideo(self, Ls):
         try:
             print('log videos....')
+            start = time.time()
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            video = cv2.VideoWriter(f'experiments/saliency_{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
+            tz = pytz.timezone('Europe/Berlin')
+            time_stamp = str(datetime.now(tz))
+            video = cv2.VideoWriter(f'experiments/saliency_{int(round(time.time() * 1000))}_video_{time_stamp}.avi', fourcc, 1, (480, 240))
             # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
 
             pool = ThreadPool(processes=8)
@@ -168,7 +176,12 @@ class ImageAgent(AutonomousAgent):
             pool.close()
             pool.terminate()
             pool.join()
-
+            """
+            for s in Ls:
+                create_and_save_saliency(self, video, s)
+            """
+            tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
+            print('\ttime: {}'.format(tstr), end='\r')
             cv2.destroyAllWindows()
             video.release()
             Ls.clear()
@@ -195,6 +208,19 @@ class ImageAgent(AutonomousAgent):
 
         self.vizs.clear()
 
+    def analzye_data(self, Ls):
+        highest_brake = {"mean": 0, "index":0}
+        lowest_brake = {"mean": 1000, "index":0}
+        for index, s in enumerate(Ls):
+            if torch.mean(s.brake_logits) > highest_brake["mean"]:
+                highest_brake["mean"] = torch.mean(s.brake_logits)
+                highest_brake["index"] = index
+            if torch.mean(s.brake_logits) < lowest_brake["mean"]:
+                lowest_brake["mean"] = torch.mean(s.brake_logits)
+                lowest_brake["index"] = index
+        print(highest_brake )
+        print(lowest_brake)
+
     def sensors(self):
         sensors = [
             {'type': 'sensor.collision', 'id': 'COLLISION'},
@@ -220,7 +246,7 @@ class ImageAgent(AutonomousAgent):
         _wide_rgb = wide_rgb[self.wide_crop_top:,:,:3]
         _wide_rgb = _wide_rgb[..., ::-1].copy()
         _wide_rgb = torch.tensor(_wide_rgb[None]).float().permute(0, 3, 1, 2).to(self.device)
-
+        print("wide")
         _narr_rgb = narr_rgb[:-self.narr_crop_bottom,:,:3]
         _narr_rgb = _narr_rgb[...,::-1].copy()
         _narr_rgb = torch.tensor(_narr_rgb[None]).float().permute(0, 3, 1, 2).to(self.device)
