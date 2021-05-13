@@ -28,6 +28,9 @@ from scipy.misc import imresize
 import skimage
 import skimage.io
 from skimage.util import img_as_float, img_as_ubyte
+import matplotlib as mpl ; mpl.use("Agg")
+import matplotlib.animation as manimation
+import matplotlib.pyplot as plt
 
 def get_entry_point():
     return 'ImageAgent'
@@ -40,6 +43,10 @@ def create_and_save_saliency(image_agent, video_saliency, video_original, info):
     video_saliency.write(saliency_img)
     video_original.write(orig_img)
 
+def create_and_save_saliency_ffmpeg(image_agent, info):
+    saliency = image_agent.score_frame(info)
+    saliency_img = image_agent.apply_saliency(saliency, info.wide_rgb, channel=0)
+    return saliency_img
 
 class ImageAgent(AutonomousAgent):
 
@@ -162,6 +169,28 @@ class ImageAgent(AutonomousAgent):
         I[:, :,channel] += S.astype('uint16')
         I = I.clip(1, 255).astype('uint8')
         return I
+
+    def saveSaliencyVideoFFMpeg(self, Ls):
+        tz = pytz.timezone('Europe/Berlin')
+        time_stamp = str(datetime.now(tz))
+        start = time.time()
+        movie_title = "original_throttle_new_approach_{}_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        FFMpegWriter = manimation.writers['ffmpeg']
+        metadata = dict(title=movie_title, artist='greydanus', comment='atari-saliency-video')
+        writer = FFMpegWriter(fps=8, metadata=metadata)
+        prog = '';
+        f = plt.figure(figsize=[6, 6 * 1.3], dpi=75)
+        print("start logging videos")
+        with writer.saving(f, "experiments/" + movie_title, 75):
+            for s in Ls:
+                frame = create_and_save_saliency_ffmpeg(self, s)
+                plt.imshow(frame);
+                plt.title("saliency", fontsize=15)
+                writer.grab_frame();
+                f.clear()
+                tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
+                print('\ttime: {}'.format(tstr), end='\r')
+        print('\nfinished.')
 
     def saveSaliencyVideo(self, Ls):
         try:
