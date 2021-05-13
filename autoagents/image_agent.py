@@ -33,12 +33,12 @@ def get_entry_point():
     return 'ImageAgent'
 
 
-def create_and_save_saliency(image_agent, video, info):
+def create_and_save_saliency(image_agent, video_saliency, video_original, info):
     saliency = image_agent.score_frame(info)
     orig_img = info.wide_rgb
-    img = image_agent.apply_saliency(saliency, info.wide_rgb, channel=2)
-    print(img)
-    video.write(img)
+    saliency_img = image_agent.apply_saliency(saliency, info.wide_rgb, channel=0)
+    video_saliency.write(saliency_img)
+    video_original.write(orig_img)
 
 
 class ImageAgent(AutonomousAgent):
@@ -119,7 +119,7 @@ class ImageAgent(AutonomousAgent):
         wide_rgb = img_as_float(skimage.color.rgb2gray(saliencyInfo.wide_rgb))#Converting to gray picture to be normalize and 2d arrau
         steer_Logits = saliencyInfo.steer_logits
         throt_Logits = saliencyInfo.throt_logits
-        brake_Logits = saliencyInfo.brake_logits
+        #brake_Logits = saliencyInfo.brake_logits
         cmd_value = saliencyInfo.cmd_value
 
         scores = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
@@ -138,7 +138,7 @@ class ImageAgent(AutonomousAgent):
 
                 x = int(i / density)
                 y = int(j / density)
-                current_score = (brake_Logits - brake_logits).pow(2).sum().mul_(.5)
+                current_score = (throt_Logits - throt_logits).pow(2).sum().mul_(.5)
                 scores[x, y] = current_score
                 # print(f'score at {x}:{y}: {scores[x, y]}')
 
@@ -146,9 +146,11 @@ class ImageAgent(AutonomousAgent):
         pmax = scores.max()
         scores = imresize(scores, size=[240, 480], interp='bilinear').astype(np.float32)
         res = pmax * scores / scores.max()
+        res = res/100.
+        #print("___")
         return res
 
-    def apply_saliency(self, saliency, frame, fudge_factor=400, channel=2, sigma=0):
+    def apply_saliency(self, saliency, frame, fudge_factor=400, channel=0, sigma=0):
         # sometimes saliency maps are a bit clearer if you blur them
         # slightly...sigma adjusts the radius of that blur
         pmax = saliency.max()
@@ -157,7 +159,7 @@ class ImageAgent(AutonomousAgent):
         S -= S.min()
         S = fudge_factor * pmax * S / S.max()
         I = frame.astype('uint16')
-        I[:, :, channel] += S.astype('uint16')
+        I[:, :,channel] += S.astype('uint16')
         I = I.clip(1, 255).astype('uint8')
         return I
 
@@ -168,11 +170,14 @@ class ImageAgent(AutonomousAgent):
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             tz = pytz.timezone('Europe/Berlin')
             time_stamp = str(datetime.now(tz))
-            video = cv2.VideoWriter(f'experiments/saliency_{int(round(time.time() * 1000))}_video_{time_stamp}.avi', fourcc, 1, (480, 240))
+            video_saliency = cv2.VideoWriter(
+                f'experiments/saliency_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi', fourcc, 1, (480, 240))
+            video_original = cv2.VideoWriter(
+                f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi', fourcc, 2, (480, 240))
             # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
 
             pool = ThreadPool(processes=8)
-            pool.starmap(create_and_save_saliency, zip(repeat(self), repeat(video), Ls))
+            pool.starmap(create_and_save_saliency, zip(repeat(self), repeat(video_saliency), repeat(video_original),  Ls))
             pool.close()
             pool.terminate()
             pool.join()
@@ -183,7 +188,8 @@ class ImageAgent(AutonomousAgent):
             tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
             print('\ttime: {}'.format(tstr), end='\r')
             cv2.destroyAllWindows()
-            video.release()
+            video_saliency.release()
+            video_original.release()
             Ls.clear()
         except:
            traceback.print_exc()
@@ -246,7 +252,7 @@ class ImageAgent(AutonomousAgent):
         _wide_rgb = wide_rgb[self.wide_crop_top:,:,:3]
         _wide_rgb = _wide_rgb[..., ::-1].copy()
         _wide_rgb = torch.tensor(_wide_rgb[None]).float().permute(0, 3, 1, 2).to(self.device)
-        print("wide")
+        #print("wide")
         _narr_rgb = narr_rgb[:-self.narr_crop_bottom,:,:3]
         _narr_rgb = _narr_rgb[...,::-1].copy()
         _narr_rgb = torch.tensor(_narr_rgb[None]).float().permute(0, 3, 1, 2).to(self.device)
