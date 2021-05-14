@@ -179,16 +179,16 @@ class ImageAgent(AutonomousAgent):
         metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
         prog = '';
-        f, ax = plt.subplots(1, 2,figsize=[6, 6 * 1.3], dpi=75)
+        f, ax = plt.subplots(2, figsize=[6, 6 * 1.3], dpi=75)
         print(ax)
         print("start logging videos")
         with writer.saving(f, "experiments/" + movie_title_saliency, 75):
             for s in Ls:
                 saliency_frame = create_and_save_saliency_ffmpeg(self, s)
                 ax[0].imshow(s.wide_rgb)
-                ax[0].set_title('original frame')
+                ax[0].set_title('Original Frame')
                 ax[1].imshow(saliency_frame)
-                ax[1].set_title('saliency frame')
+                ax[1].set_title('Saliency Frame')
                 writer.grab_frame()
                 f.clear()
                 tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
