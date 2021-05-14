@@ -15,7 +15,19 @@ def run_all(config, data):
     Ls = torch.load(data)
     imageAgent.saveSaliencyVideo(Ls)
 
+def run_all_ffmpeg(config, data):
+    imageAgent = ImageAgent(config)
+    Ls = torch.load(data)
+    imageAgent.saveSaliencyVideoFFMpeg(Ls)
+
+def run_analzyse_data_set(config, data):
+    imageAgent = ImageAgent(config)
+    Ls = torch.load(data)
+    imageAgent.analzye_data(Ls)
+
 
 if __name__ == '__main__':
-    # split_data(200, 60)
-    run_all('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_200_60.data')
+    #split_data(970, 1)
+    #run_all('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_970_1.data')
+    #run_analzyse_data_set('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409.data')
+    run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_970_1.data')
