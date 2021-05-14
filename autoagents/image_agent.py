@@ -37,8 +37,9 @@ def get_entry_point():
 
 
 def create_and_save_saliency(image_agent, video_saliency, video_original, info):
-    saliency = image_agent.score_frame(info)
-    orig_img = info.wide_rgb
+    saliency = image_agent.score_frame(info, density=10, radius=10)
+    cv2.imwrite(f'experiments/saliency_{get_time_mils()}.png', saliency)
+    orig_img = info.wide_rgb.copy()
     saliency_img = image_agent.apply_saliency(saliency, info.wide_rgb, channel=0)
     video_saliency.write(saliency_img)
     video_original.write(orig_img)
@@ -47,6 +48,11 @@ def create_and_save_saliency_ffmpeg(image_agent, info):
     saliency = image_agent.score_frame(info)
     saliency_img = image_agent.apply_saliency(saliency, info.wide_rgb, channel=0)
     return saliency_img
+
+
+def get_time_mils():
+    return int(round(time.time() * 1000))
+
 
 class ImageAgent(AutonomousAgent):
 
@@ -133,10 +139,9 @@ class ImageAgent(AutonomousAgent):
         for i in range(0, 240, density):
             for j in range(0, 480, density):
                 masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240,  480], radius=radius)
+
                 masking_wide_rgp = skimage.color.gray2rgb(masking_wide_rgp)
                 masking_wide_rgp = img_as_ubyte(masking_wide_rgp)
-
-                #print(masking_wide_rgp) #All values still normalize
 
                 _masking_wide_rgp = masking_wide_rgp[self.wide_crop_top:, :, :3]
                 _masking_wide_rgp = _masking_wide_rgp[..., ::-1].copy()
@@ -153,8 +158,10 @@ class ImageAgent(AutonomousAgent):
         pmax = scores.max()
         scores = imresize(scores, size=[240, 480], interp='bilinear').astype(np.float32)
         res = pmax * scores / scores.max()
-        res = res/100.
-        #print("___")
+        # res = res/100.
+
+        log = get_time_mils()
+        cv2.imwrite(f'experiments/scores_res_{log}.png', res)
         return res
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=0, sigma=0):
@@ -174,22 +181,19 @@ class ImageAgent(AutonomousAgent):
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
         start = time.time()
-        movie_title_saliency = "original_throttle_new_approach_{}_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        movie_title = "original_throttle_new_approach_{}_video_{}.mp4".format(get_time_mils(), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
         FFMpegWriter = manimation.writers['ffmpeg']
-        metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
+        metadata = dict(title=movie_title, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
         prog = '';
-        f, ax = plt.subplots(2, figsize=[6, 6 * 1.3], dpi=75)
-        print(ax)
+        f = plt.figure(figsize=[6, 6 * 1.3], dpi=75)
         print("start logging videos")
-        with writer.saving(f, "experiments/" + movie_title_saliency, 75):
+        with writer.saving(f, "experiments/" + movie_title, 75):
             for s in Ls:
-                saliency_frame = create_and_save_saliency_ffmpeg(self, s)
-                ax[0].imshow(s.wide_rgb)
-                ax[0].set_title('Original Frame')
-                ax[1].imshow(saliency_frame)
-                ax[1].set_title('Saliency Frame')
-                writer.grab_frame()
+                frame = create_and_save_saliency_ffmpeg(self, s)
+                plt.imshow(frame);
+                plt.title("saliency", fontsize=15)
+                writer.grab_frame();
                 f.clear()
                 tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
                 print('\ttime: {}'.format(tstr), end='\r')
@@ -203,12 +207,12 @@ class ImageAgent(AutonomousAgent):
             tz = pytz.timezone('Europe/Berlin')
             time_stamp = str(datetime.now(tz))
             video_saliency = cv2.VideoWriter(
-                f'experiments/saliency_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi', fourcc, 1, (480, 240))
+                f'experiments/saliency_throttle_{get_time_mils()}_video_{time_stamp}.avi', fourcc, 1, (480, 240))
             video_original = cv2.VideoWriter(
-                f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi', fourcc, 2, (480, 240))
+                f'experiments/original_throttle_{get_time_mils()}_video_{time_stamp}.avi', fourcc, 2, (480, 240))
             # torch.save(self.Ls, f'expirements/flush_{int(round(time.time() * 1000))}.data')
 
-            pool = ThreadPool(processes=8)
+            pool = ThreadPool(processes=2)
             pool.starmap(create_and_save_saliency, zip(repeat(self), repeat(video_saliency), repeat(video_original),  Ls))
             pool.close()
             pool.terminate()
@@ -228,7 +232,7 @@ class ImageAgent(AutonomousAgent):
 
     def save_input_sensor_video(self):
         fourcc = cv2.VideoWriter_fourcc(*'mp4')
-        video = cv2.VideoWriter(f'expirements/{int(round(time.time() * 1000))}.avi', fourcc, 1, (480, 240))
+        video = cv2.VideoWriter(f'expirements/{get_time_mils()}.avi', fourcc, 1, (480, 240))
         for frame in self.inputCamera:
             video.write(frame)
         cv2.destroyAllWindows()
