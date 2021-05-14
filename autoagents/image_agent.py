@@ -174,19 +174,22 @@ class ImageAgent(AutonomousAgent):
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
         start = time.time()
-        movie_title = "original_throttle_new_approach_{}_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        movie_title_saliency = "original_throttle_new_approach_{}_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
         FFMpegWriter = manimation.writers['ffmpeg']
-        metadata = dict(title=movie_title, artist='greydanus', comment='atari-saliency-video')
+        metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
         prog = '';
-        f = plt.figure(figsize=[6, 6 * 1.3], dpi=75)
+        f, ax = plt.subplots(1, 2,figsize=[6, 6 * 1.3], dpi=75)
+        print(ax)
         print("start logging videos")
-        with writer.saving(f, "experiments/" + movie_title, 75):
+        with writer.saving(f, "experiments/" + movie_title_saliency, 75):
             for s in Ls:
-                frame = create_and_save_saliency_ffmpeg(self, s)
-                plt.imshow(frame);
-                plt.title("saliency", fontsize=15)
-                writer.grab_frame();
+                saliency_frame = create_and_save_saliency_ffmpeg(self, s)
+                ax[0].imshow(s.wide_rgb)
+                ax[0].set_title('original frame')
+                ax[1].imshow(saliency_frame)
+                ax[1].set_title('saliency frame')
+                writer.grab_frame()
                 f.clear()
                 tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
                 print('\ttime: {}'.format(tstr), end='\r')
