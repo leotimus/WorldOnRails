@@ -158,12 +158,17 @@ class ImageAgent(AutonomousAgent):
         pmax = scores.max()
         scores = imresize(scores, size=[240, 480], interp='lanczos').astype(np.float32)
         res = pmax * scores / scores.max()
+        scores_bilinear = imresize(scores, size=[240, 480], interp='bilinear').astype(np.float32)
+        pmax_bilinear = scores_bilinear.max()
+        res_bilinear =  pmax_bilinear * scores_bilinear / scores_bilinear.max()
 
         # res = res/100.
 
         log = get_time_mils()
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
+        cv2.imwrite(f'experiments/scores_{log}_{time_stamp}_bilinear.png', scores_bilinear)
+        cv2.imwrite(f'experiments/res_{log}_{time_stamp}_bilinear.png', res_bilinear)
         score_img_name = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
         res_img_name = f'experiments/res_{log}_{time_stamp}_lanczos.png'
         cv2.imwrite(score_img_name, scores)
@@ -175,8 +180,10 @@ class ImageAgent(AutonomousAgent):
         erased_gray_score = skimage.color.rgb2gray(erased_gray_score)
         new_res = pmax * erased_gray_score / erased_gray_score.max()
         cv2.imwrite(f'experiments/scores_denoised_{log}_{time_stamp}_lanczos.png', scores_denoised)
-        cv2.imwrite(f'experiments/scores_denoised_outgrayed_larger_scale_{log}_{time_stamp}_lanczos.png', erased_gray_score)
-        cv2.imwrite(f'experiments/res_denoised_outgrayed_larger_scale{log}_{time_stamp}_lanczos.png', new_res)
+        res_denoised = scores_denoised.max() * scores_denoised / scores_denoised.max()
+        cv2.imwrite(f'experiments/res_denoised_{log}_{time_stamp}_lanczos.png', res_denoised)
+        cv2.imwrite(f'experiments/scores_denoised_pruned_scale_{log}_{time_stamp}_lanczos.png', erased_gray_score)
+        cv2.imwrite(f'experiments/res_denoised_pruned_scale{log}_{time_stamp}_lanczos.png', new_res)
         return new_res
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=0, sigma=0):
@@ -196,7 +203,7 @@ class ImageAgent(AutonomousAgent):
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
         start = time.time()
-        movie_title_saliency = "original_throttle_new_approach_{}_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        movie_title_saliency = "original_throttle_saliency_{}_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
         FFMpegWriter = manimation.writers['ffmpeg']
         metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)

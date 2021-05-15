@@ -27,7 +27,7 @@ def run_analzyse_data_set(config, data):
 
 
 if __name__ == '__main__':
-    #split_data(970, 1)
+    #split_data(955, 30)
     #run_all('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_970_1.data')
     #run_analzyse_data_set('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409.data')
-    run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_970_1.data')
+    run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_955_30.data')
