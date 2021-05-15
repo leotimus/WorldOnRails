@@ -156,19 +156,36 @@ class ImageAgent(AutonomousAgent):
 
 
         pmax = scores.max()
-        scores = imresize(scores, size=[240, 480], interp='bilinear').astype(np.float32)
+        scores = imresize(scores, size=[240, 480], interp='lanczos').astype(np.float32)
         res = pmax * scores / scores.max()
+
         # res = res/100.
 
         log = get_time_mils()
-        cv2.imwrite(f'experiments/scores_res_{log}.png', res)
-        return res
+        tz = pytz.timezone('Europe/Berlin')
+        time_stamp = str(datetime.now(tz))
+        score_img_name = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
+        res_img_name = f'experiments/res_{log}_{time_stamp}_lanczos.png'
+        cv2.imwrite(score_img_name, scores)
+        cv2.imwrite(res_img_name, res)
+        score_image = cv2.imread(score_img_name)
+        scores_denoised = cv2.fastNlMeansDenoising(score_image, None, 10, 7, 21)
+        movsd = np.argmax(np.bincount(scores_denoised.flat))
+        print(movsd)
+        erased_gray_score = np.where(scores_denoised <= movsd + 20, 0, scores_denoised)
+        print(np.argmax(np.bincount(erased_gray_score.flat)))
+        erased_gray_score = skimage.color.rgb2gray(erased_gray_score)
+        new_res = pmax * erased_gray_score / erased_gray_score.max()
+        cv2.imwrite(f'experiments/scores_denoised_{log}_{time_stamp}_lanczos.png', scores_denoised)
+        cv2.imwrite(f'experiments/scores_denoised_outgrayed_larger_scale_{log}_{time_stamp}_lanczos.png', erased_gray_score)
+        cv2.imwrite(f'experiments/res_denoised_outgrayed_larger_scale{log}_{time_stamp}_lanczos.png', new_res)
+        return new_res
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=0, sigma=0):
         # sometimes saliency maps are a bit clearer if you blur them
         # slightly...sigma adjusts the radius of that blur
         pmax = saliency.max()
-        S = imresize(saliency, size=[240, 480], interp='bilinear').astype(np.float32)#Double it like in origian;
+        S = imresize(saliency, size=[240, 480], interp='lanczos').astype(np.float32)#Double it like in origian;
         S = S if sigma == 0 else gaussian_filter(S, sigma=sigma)
         S -= S.min()
         S = fudge_factor * pmax * S / S.max()
@@ -181,19 +198,20 @@ class ImageAgent(AutonomousAgent):
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
         start = time.time()
-        movie_title = "original_throttle_new_approach_{}_video_{}.mp4".format(get_time_mils(), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        movie_title_saliency = "original_throttle_new_approach_{}_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
         FFMpegWriter = manimation.writers['ffmpeg']
-        metadata = dict(title=movie_title, artist='greydanus', comment='atari-saliency-video')
+        metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
         prog = '';
-        f = plt.figure(figsize=[6, 6 * 1.3], dpi=75)
-        print("start logging videos")
-        with writer.saving(f, "experiments/" + movie_title, 75):
+        f, ax = plt.subplots(2, figsize=[6, 6 * 1.3], dpi=75)
+        with writer.saving(f, "experiments/" + movie_title_saliency, 75):
             for s in Ls:
-                frame = create_and_save_saliency_ffmpeg(self, s)
-                plt.imshow(frame);
-                plt.title("saliency", fontsize=15)
-                writer.grab_frame();
+                saliency_frame = create_and_save_saliency_ffmpeg(self, s)
+                ax[0].imshow(s.wide_rgb)
+                ax[0].set_title('Original Frame')
+                ax[1].imshow(saliency_frame)
+                ax[1].set_title('Saliency Frame')
+                writer.grab_frame()
                 f.clear()
                 tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
                 print('\ttime: {}'.format(tstr), end='\r')
@@ -231,16 +249,20 @@ class ImageAgent(AutonomousAgent):
            traceback.print_exc()
 
     def save_input_sensor_video(self):
-        fourcc = cv2.VideoWriter_fourcc(*'mp4')
-        video = cv2.VideoWriter(f'expirements/{get_time_mils()}.avi', fourcc, 1, (480, 240))
+        print("Save Input")
+        torch.save(self.Ls, f'experiments/new_flush_{int(round(time.time() * 1000))}.data')
+        print("Data produced")
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        video = cv2.VideoWriter(f'experiments/video_stuff_{get_time_mils()}.avi', fourcc, 1, (480, 240))
         for frame in self.inputCamera:
             video.write(frame)
+        print("release")
         cv2.destroyAllWindows()
         video.release()
         self.inputCamera.clear()
 
     def flush_data(self):
-        # self.save_input_sensor_video()
+        #self.save_input_sensor_video()
         self.saveSaliencyVideo(self.Ls)
 
         if self.log_wandb:
