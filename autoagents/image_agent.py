@@ -152,7 +152,7 @@ class ImageAgent(AutonomousAgent):
                 y = int(j / density)
                 current_score = (throt_Logits - throt_logits).pow(2).sum().mul_(.5)
                 scores[x, y] = current_score
-                # print(f'score at {x}:{y}: {scores[x, y]}')
+
 
 
         pmax = scores.max()
@@ -171,9 +171,7 @@ class ImageAgent(AutonomousAgent):
         score_image = cv2.imread(score_img_name)
         scores_denoised = cv2.fastNlMeansDenoising(score_image, None, 10, 7, 21)
         movsd = np.argmax(np.bincount(scores_denoised.flat))
-        print(movsd)
-        erased_gray_score = np.where(scores_denoised <= movsd + 20, 0, scores_denoised)
-        print(np.argmax(np.bincount(erased_gray_score.flat)))
+        erased_gray_score = np.where(scores_denoised <= movsd + 30, 0, scores_denoised)
         erased_gray_score = skimage.color.rgb2gray(erased_gray_score)
         new_res = pmax * erased_gray_score / erased_gray_score.max()
         cv2.imwrite(f'experiments/scores_denoised_{log}_{time_stamp}_lanczos.png', scores_denoised)
@@ -251,7 +249,6 @@ class ImageAgent(AutonomousAgent):
     def save_input_sensor_video(self):
         print("Save Input")
         torch.save(self.Ls, f'experiments/new_flush_{int(round(time.time() * 1000))}.data')
-        print("Data produced")
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         video = cv2.VideoWriter(f'experiments/video_stuff_{get_time_mils()}.avi', fourcc, 1, (480, 240))
         for frame in self.inputCamera:
@@ -310,7 +307,6 @@ class ImageAgent(AutonomousAgent):
         _wide_rgb = wide_rgb[self.wide_crop_top:,:,:3]
         _wide_rgb = _wide_rgb[..., ::-1].copy()
         _wide_rgb = torch.tensor(_wide_rgb[None]).float().permute(0, 3, 1, 2).to(self.device)
-        #print("wide")
         _narr_rgb = narr_rgb[:-self.narr_crop_bottom,:,:3]
         _narr_rgb = _narr_rgb[...,::-1].copy()
         _narr_rgb = torch.tensor(_narr_rgb[None]).float().permute(0, 3, 1, 2).to(self.device)
