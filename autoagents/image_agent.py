@@ -32,6 +32,9 @@ import matplotlib as mpl ; mpl.use("Agg")
 import matplotlib.animation as manimation
 import matplotlib.pyplot as plt
 
+def get_time_mils():
+    return int(round(time.time() * 1000))
+
 def get_entry_point():
     return 'ImageAgent'
 
@@ -151,17 +154,32 @@ class ImageAgent(AutonomousAgent):
 
 
         pmax = scores.max()
-        scores = imresize(scores, size=[240, 480], interp='bilinear').astype(np.float32)
+        scores = imresize(scores, size=[240, 480], interp='lanczos').astype(np.float32)
         res = pmax * scores / scores.max()
-        res = res/100.
+
+        log = get_time_mils()
+        tz = pytz.timezone('Europe/Berlin')
+        time_stamp = str(datetime.now(tz))
+        score_img_name = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
+        cv2.imwrite(score_img_name, scores)
+        score_image = cv2.imread(score_img_name)
+        scores_denoised = cv2.fastNlMeansDenoising(score_image, None, 10, 7, 21)
+        movsd = np.argmax(np.bincount(scores_denoised.flat))
+        erased_gray_score = np.where(scores_denoised <= movsd + 30, 0, scores_denoised)
+        erased_gray_score = skimage.color.rgb2gray(erased_gray_score)
+        new_res = pmax * erased_gray_score / erased_gray_score.max()
+
+        #res = res/100.
         #print("___")
-        return res
+        return new_res
+
+
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=0, sigma=0):
         # sometimes saliency maps are a bit clearer if you blur them
         # slightly...sigma adjusts the radius of that blur
         pmax = saliency.max()
-        S = imresize(saliency, size=[240, 480], interp='bilinear').astype(np.float32)#Double it like in origian;
+        S = imresize(saliency, size=[240, 480], interp='lanczos').astype(np.float32)#Double it like in origian;
         S = S if sigma == 0 else gaussian_filter(S, sigma=sigma)
         S -= S.min()
         S = fudge_factor * pmax * S / S.max()
@@ -174,7 +192,7 @@ class ImageAgent(AutonomousAgent):
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
         start = time.time()
-        movie_title_saliency = "original_throttle_new_approach_{}_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        movie_title_saliency = "original_throttle_new_approach_{}_video_{}_denoised.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
         FFMpegWriter = manimation.writers['ffmpeg']
         metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
