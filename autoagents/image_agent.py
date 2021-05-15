@@ -45,7 +45,7 @@ def create_and_save_saliency(image_agent, video_saliency, video_original, info):
     video_original.write(orig_img)
 
 def create_and_save_saliency_ffmpeg(image_agent, info):
-    saliency = image_agent.score_frame(info)
+    saliency = image_agent.score_frame(info, density=10, radius=10)
     saliency_img = image_agent.apply_saliency(saliency, info.wide_rgb, channel=0)
     return saliency_img
 
@@ -207,12 +207,11 @@ class ImageAgent(AutonomousAgent):
         with writer.saving(f, "experiments/" + movie_title_saliency, 75):
             for s in Ls:
                 saliency_frame = create_and_save_saliency_ffmpeg(self, s)
-                ax[0].imshow(s.wide_rgb)
+                ax[0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
                 ax[0].set_title('Original Frame')
-                ax[1].imshow(saliency_frame)
+                ax[1].imshow(cv2.cvtColor(saliency_frame, cv2.COLOR_BGR2RGB))
                 ax[1].set_title('Saliency Frame')
                 writer.grab_frame()
-                f.clear()
                 tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
                 print('\ttime: {}'.format(tstr), end='\r')
         print('\nfinished.')
