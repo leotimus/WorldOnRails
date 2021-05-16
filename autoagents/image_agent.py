@@ -132,10 +132,12 @@ class ImageAgent(AutonomousAgent):
         wide_rgb = img_as_float(skimage.color.rgb2gray(saliencyInfo.wide_rgb))#Converting to gray picture to be normalize and 2d arrau
         steer_Logits = saliencyInfo.steer_logits
         throt_Logits = saliencyInfo.throt_logits
-        #brake_Logits = saliencyInfo.brake_logits
+        brake_Logits = saliencyInfo.brake_logits
         cmd_value = saliencyInfo.cmd_value
 
-        scores = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
+        scores_throttle = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
+        scores_steer = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
+        scores_brake = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
         for i in range(0, 240, density):
             for j in range(0, 480, density):
                 masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240,  480], radius=radius)
@@ -150,34 +152,66 @@ class ImageAgent(AutonomousAgent):
 
                 x = int(i / density)
                 y = int(j / density)
-                current_score = (throt_Logits - throt_logits).pow(2).sum().mul_(.5)
-                scores[x, y] = current_score
+                current_score_steer = (steer_Logits - steer_logits).pow(2).sum().mul_(.5)
+                current_score_throttle = (throt_Logits - throt_logits).pow(2).sum().mul_(.5)
+                current_score_brake = (brake_Logits - brake_logits).pow(2).sum().mul_(.5)
+                scores_throttle[x, y] = current_score_throttle
+                scores_steer[x, y] = current_score_steer
+                scores_brake[x, y] = current_score_brake
 
 
 
-        pmax = scores.max()
-        scores = imresize(scores, size=[240, 480], interp='lanczos').astype(np.float32)
-        res = pmax * scores / scores.max()
+        pmax_throttle = scores_throttle.max()
+        scores_throttle = imresize(scores_throttle, size=[240, 480], interp='lanczos').astype(np.float32)
+        res_throttle = pmax_throttle * scores_throttle / scores_throttle.max()
+
+        pmax_brake = scores_brake.max()
+        scores_brake = imresize(scores_brake, size=[240, 480], interp='lanczos').astype(np.float32)
+        res_brake = pmax_brake * scores_brake / scores_brake.max()
+
+        pmax_steer = scores_steer .max()
+        scores_steer = imresize(scores_steer , size=[240, 480], interp='lanczos').astype(np.float32)
+        res_steer = pmax_steer  * scores_steer  / scores_steer.max()
 
         # res = res/100.
 
         log = get_time_mils()
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
-        score_img_name = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
-        res_img_name = f'experiments/res_{log}_{time_stamp}_lanczos.png'
-        cv2.imwrite(score_img_name, scores)
-        cv2.imwrite(res_img_name, res)
-        score_image = cv2.imread(score_img_name)
-        scores_denoised = cv2.fastNlMeansDenoising(score_image, None, 10, 7, 21)
-        movsd = np.argmax(np.bincount(scores_denoised.flat))
-        erased_gray_score = np.where(scores_denoised <= movsd + 30, 0, scores_denoised)
-        erased_gray_score = skimage.color.rgb2gray(erased_gray_score)
-        new_res = pmax * erased_gray_score / erased_gray_score.max()
-        cv2.imwrite(f'experiments/scores_denoised_{log}_{time_stamp}_lanczos.png', scores_denoised)
-        cv2.imwrite(f'experiments/scores_denoised_outgrayed_larger_scale_{log}_{time_stamp}_lanczos.png', erased_gray_score)
-        cv2.imwrite(f'experiments/res_denoised_outgrayed_larger_scale{log}_{time_stamp}_lanczos.png', new_res)
-        return new_res
+        score_img_name_throttle = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
+        score_img_name_brake = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
+        score_img_name_steer = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
+        #res_img_name_throttle = f'experiments/res_{log}_{time_stamp}_lanczos.png'
+        cv2.imwrite(score_img_name_throttle, scores_throttle)
+        cv2.imwrite(score_img_name_brake, scores_brake)
+        cv2.imwrite(score_img_name_steer, scores_steer)
+        #cv2.imwrite(res_img_name_throttle, res_throttle)
+        score_image_throttle = cv2.imread(score_img_name_throttle)
+        score_image_brake = cv2.imread(score_img_name_brake)
+        score_image_steer = cv2.imread(score_img_name_steer)
+        scores_denoised_throttle = cv2.fastNlMeansDenoising(score_image_throttle, None, 10, 7, 21)
+        scores_denoised_brake = cv2.fastNlMeansDenoising(score_image_brake, None, 10, 7, 21)
+        scores_denoised_steer = cv2.fastNlMeansDenoising(score_image_steer, None, 10, 7, 21)
+        movsd_throttle = np.argmax(np.bincount(scores_denoised_throttle.flat))
+        movsd_brake = np.argmax(np.bincount(scores_denoised_brake.flat))
+        movsd_steer = np.argmax(np.bincount(scores_denoised_steer.flat))
+        erased_gray_score_throttle = np.where(scores_denoised_throttle <= movsd_throttle + 30, 0, scores_denoised_throttle)
+        erased_gray_score_throttle = skimage.color.rgb2gray(erased_gray_score_throttle)
+        new_res_throttle = pmax_throttle * erased_gray_score_throttle / erased_gray_score_throttle.max()
+
+        erased_gray_score_brake = np.where(scores_denoised_brake <= movsd_brake + 30, 0,
+                                              scores_denoised_brake)
+        erased_gray_score_brake = skimage.color.rgb2gray(erased_gray_score_brake)
+        new_res_brake = pmax_brake* erased_gray_score_brake / erased_gray_score_brake.max()
+
+        erased_gray_score_steer = np.where(scores_denoised_steer <= movsd_steer+ 30, 0,
+                                              scores_denoised_steer)
+        erased_gray_score_steer = skimage.color.rgb2gray(erased_gray_score_steer)
+        new_res_steer = pmax_steer * erased_gray_score_steer / erased_gray_score_steer.max()
+        #cv2.imwrite(f'experiments/scores_denoised_{log}_{time_stamp}_lanczos.png', scores_denoised_throttle)
+        #cv2.imwrite(f'experiments/scores_denoised_outgrayed_larger_scale_{log}_{time_stamp}_lanczos.png', erased_gray_score_throttle)
+        #cv2.imwrite(f'experiments/res_denoised_outgrayed_larger_scale{log}_{time_stamp}_lanczos.png', new_res_throttle)
+        return new_res_throttle
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=0, sigma=0):
         # sometimes saliency maps are a bit clearer if you blur them
