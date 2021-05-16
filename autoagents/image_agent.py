@@ -140,8 +140,8 @@ class ImageAgent(AutonomousAgent):
         scores_throttle = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
         scores_steer = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
         scores_brake = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
-        for i in range(0, 240, density):
-            for j in range(0, 480, density):
+        for i in range(0, 60, density):
+            for j in range(0, 120, density):
                 masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240,  480], radius=radius)
 
                 masking_wide_rgp = skimage.color.gray2rgb(masking_wide_rgp)
@@ -152,14 +152,33 @@ class ImageAgent(AutonomousAgent):
                 _masking_wide_rgp = torch.tensor(_masking_wide_rgp[None]).float().permute(0, 3, 1, 2).to(self.device)
                 steer_logits, throt_logits, brake_logits = self.image_model.policy(_masking_wide_rgp, None, cmd_value)
 
-                x = int(i / density)
-                y = int(j / density)
                 current_score_steer = (steer_Logits - steer_logits).pow(2).sum().mul_(.5)
                 current_score_throttle = (throt_Logits - throt_logits).pow(2).sum().mul_(.5)
                 current_score_brake = (brake_Logits - brake_logits).pow(2).sum().mul_(.5)
-                scores_throttle[x, y] = current_score_throttle
-                scores_steer[x, y] = current_score_steer
-                scores_brake[x, y] = current_score_brake
+
+                # [] + :
+                """
+                print(i)
+                print(j)
+                k = i * 4
+                p = j * 4
+                print(k)
+                print(p)
+                print("____________________")
+                """
+                k = i * 4
+                p = j * 4
+                for m in range(k, k + 4):
+                    for n in range(p, p + 4):
+                        #print(m)
+                        #print(n)
+                        x = int(m / density)
+                        y = int(n / density)
+                        print(x)
+                        print(y)
+                        scores_throttle[x, y] = current_score_throttle
+                        scores_steer[x, y] = current_score_steer
+                        scores_brake[x, y] = current_score_brake
 
 
 
@@ -232,7 +251,7 @@ class ImageAgent(AutonomousAgent):
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
         start = time.time()
-        movie_title_saliency = "original_saliency_compare_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        movie_title_saliency = "original_saliency_compare_video_{}_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
         FFMpegWriter = manimation.writers['ffmpeg']
         metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
