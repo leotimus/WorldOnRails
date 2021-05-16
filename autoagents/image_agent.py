@@ -46,8 +46,10 @@ def create_and_save_saliency(image_agent, video_saliency, video_original, info):
 
 def create_and_save_saliency_ffmpeg(image_agent, info):
     saliency = image_agent.score_frame(info, density=10, radius=10)
-    saliency_img = image_agent.apply_saliency(saliency, info.wide_rgb, channel=0)
-    return saliency_img
+    saliency_img_throttle = image_agent.apply_saliency(saliency[0], info.wide_rgb, channel=0)
+    saliency_img_brake = image_agent.apply_saliency(saliency[1], info.wide_rgb, channel=1)
+    saliency_img_steer = image_agent.apply_saliency(saliency[2], info.wide_rgb, channel=2)
+    return saliency_img_throttle, saliency_img_brake, saliency_img_steer
 
 
 def get_time_mils():
@@ -178,9 +180,9 @@ class ImageAgent(AutonomousAgent):
         log = get_time_mils()
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
-        score_img_name_throttle = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
-        score_img_name_brake = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
-        score_img_name_steer = f'experiments/scores_{log}_{time_stamp}_lanczos.png'
+        score_img_name_throttle = f'experiments/scores_throttle_{log}_{time_stamp}_lanczos.png'
+        score_img_name_brake = f'experiments/scores_brake_{log}_{time_stamp}_lanczos.png'
+        score_img_name_steer = f'experiments/scores_steer_{log}_{time_stamp}_lanczos.png'
         #res_img_name_throttle = f'experiments/res_{log}_{time_stamp}_lanczos.png'
         cv2.imwrite(score_img_name_throttle, scores_throttle)
         cv2.imwrite(score_img_name_brake, scores_brake)
@@ -211,7 +213,7 @@ class ImageAgent(AutonomousAgent):
         #cv2.imwrite(f'experiments/scores_denoised_{log}_{time_stamp}_lanczos.png', scores_denoised_throttle)
         #cv2.imwrite(f'experiments/scores_denoised_outgrayed_larger_scale_{log}_{time_stamp}_lanczos.png', erased_gray_score_throttle)
         #cv2.imwrite(f'experiments/res_denoised_outgrayed_larger_scale{log}_{time_stamp}_lanczos.png', new_res_throttle)
-        return new_res_throttle
+        return [new_res_throttle, new_res_brake, new_res_steer]
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=0, sigma=0):
         # sometimes saliency maps are a bit clearer if you blur them
@@ -230,11 +232,13 @@ class ImageAgent(AutonomousAgent):
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
         start = time.time()
-        movie_title_saliency = "original_throttle_new_approach_{}_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        movie_title_saliency = "original_saliency_compare_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
         FFMpegWriter = manimation.writers['ffmpeg']
         metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
         prog = '';
+        #Setup for Original grame and underneath Saliency Frame of one feature
+        """
         f, ax = plt.subplots(2, figsize=[6, 6 * 1.3], dpi=75)
         with writer.saving(f, "experiments/" + movie_title_saliency, 75):
             for s in Ls:
@@ -243,6 +247,24 @@ class ImageAgent(AutonomousAgent):
                 ax[0].set_title('Original Frame')
                 ax[1].imshow(cv2.cvtColor(saliency_frame, cv2.COLOR_BGR2RGB))
                 ax[1].set_title('Saliency Frame')
+                writer.grab_frame()
+                tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
+                print('\ttime: {}'.format(tstr), end='\r')
+        print('\nfinished.')
+        """
+        f, ax = plt.subplots(4, figsize=[6, 6 * 1.3], dpi=75)
+        f.tight_layout()
+        with writer.saving(f, "experiments/" + movie_title_saliency, 75):
+            for s in Ls:
+                s_throttle, s_brake, s_steer = create_and_save_saliency_ffmpeg(self, s)
+                ax[0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
+                ax[0].set_title('Original Frame')
+                ax[1].imshow(cv2.cvtColor(s_throttle, cv2.COLOR_BGR2RGB))
+                ax[1].set_title('Saliency Frame Throttle')
+                ax[2].imshow(cv2.cvtColor(s_brake, cv2.COLOR_BGR2RGB))
+                ax[2].set_title('Saliency Frame Brake')
+                ax[3].imshow(cv2.cvtColor(s_steer, cv2.COLOR_BGR2RGB))
+                ax[3].set_title('Saliency Frame Steer')
                 writer.grab_frame()
                 tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
                 print('\ttime: {}'.format(tstr), end='\r')
