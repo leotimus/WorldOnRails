@@ -126,11 +126,10 @@ class ImageAgent(AutonomousAgent):
         mask = gaussian_filter(mask, sigma=radius)  # blur the circle of pixels. this is a 2D Gaussian for r=r^2=1
         return mask / mask.max()
 
-    def score_frame(self, saliencyInfo, density=5, radius=5):
+    def score_frame(self, saliencyInfo, density=10, radius=5):
         # r: radius of blur
         # d: density of scores (if d==1, then get a score for every pixel...
         #    if d==2 then every other, which is 25% of total pixels for a 2D image)
-
         wide_rgb = img_as_float(skimage.color.rgb2gray(saliencyInfo.wide_rgb))#Converting to gray picture to be normalize and 2d arrau
         steer_Logits = saliencyInfo.steer_logits
         throt_Logits = saliencyInfo.throt_logits
@@ -197,16 +196,16 @@ class ImageAgent(AutonomousAgent):
         movsd_throttle = np.argmax(np.bincount(scores_denoised_throttle.flat))
         movsd_brake = np.argmax(np.bincount(scores_denoised_brake.flat))
         movsd_steer = np.argmax(np.bincount(scores_denoised_steer.flat))
-        erased_gray_score_throttle = np.where(scores_denoised_throttle <= movsd_throttle + 30, 0, scores_denoised_throttle)
+        erased_gray_score_throttle = np.where(scores_denoised_throttle <= movsd_throttle + 55, 0, scores_denoised_throttle)
         erased_gray_score_throttle = skimage.color.rgb2gray(erased_gray_score_throttle)
         new_res_throttle = pmax_throttle * erased_gray_score_throttle / erased_gray_score_throttle.max()
 
-        erased_gray_score_brake = np.where(scores_denoised_brake <= movsd_brake + 30, 0,
+        erased_gray_score_brake = np.where(scores_denoised_brake <= movsd_brake + 55, 0,
                                               scores_denoised_brake)
         erased_gray_score_brake = skimage.color.rgb2gray(erased_gray_score_brake)
         new_res_brake = pmax_brake* erased_gray_score_brake / erased_gray_score_brake.max()
 
-        erased_gray_score_steer = np.where(scores_denoised_steer <= movsd_steer+ 30, 0,
+        erased_gray_score_steer = np.where(scores_denoised_steer <= movsd_steer + 55, 0,
                                               scores_denoised_steer)
         erased_gray_score_steer = skimage.color.rgb2gray(erased_gray_score_steer)
         new_res_steer = pmax_steer * erased_gray_score_steer / erased_gray_score_steer.max()
@@ -232,7 +231,7 @@ class ImageAgent(AutonomousAgent):
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
         start = time.time()
-        movie_title_saliency = "original_saliency_compare_video_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        movie_title_saliency = "original_saliency_compare_video_{}_{}.mp4".format(int(round(time.time() * 1000)), time_stamp) #f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
         FFMpegWriter = manimation.writers['ffmpeg']
         metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
@@ -252,19 +251,23 @@ class ImageAgent(AutonomousAgent):
                 print('\ttime: {}'.format(tstr), end='\r')
         print('\nfinished.')
         """
-        f, ax = plt.subplots(4, figsize=[6, 6 * 1.3], dpi=75)
+        f, ax= plt.subplots(2,2)
         f.tight_layout()
         with writer.saving(f, "experiments/" + movie_title_saliency, 75):
             for s in Ls:
                 s_throttle, s_brake, s_steer = create_and_save_saliency_ffmpeg(self, s)
-                ax[0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
-                ax[0].set_title('Original Frame')
-                ax[1].imshow(cv2.cvtColor(s_throttle, cv2.COLOR_BGR2RGB))
-                ax[1].set_title('Saliency Frame Throttle')
-                ax[2].imshow(cv2.cvtColor(s_brake, cv2.COLOR_BGR2RGB))
-                ax[2].set_title('Saliency Frame Brake')
-                ax[3].imshow(cv2.cvtColor(s_steer, cv2.COLOR_BGR2RGB))
-                ax[3].set_title('Saliency Frame Steer')
+                ax[0,0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
+                ax[0,0].set_title('Original Frame')
+                ax[0,0].set_aspect('equal')
+                ax[0,1].imshow(cv2.cvtColor(s_throttle, cv2.COLOR_BGR2RGB))
+                ax[0,1].set_title('Saliency Frame Throttle')
+                ax[0,1].set_aspect('equal')
+                ax[1,0].imshow(cv2.cvtColor(s_brake, cv2.COLOR_BGR2RGB))
+                ax[1,0].set_title('Saliency Frame Brake')
+                ax[1,0].set_aspect('equal')
+                ax[1,1].imshow(cv2.cvtColor(s_steer, cv2.COLOR_BGR2RGB))
+                ax[1,1].set_title('Saliency Frame Steer')
+                ax[1,1].set_aspect('equal')
                 writer.grab_frame()
                 tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
                 print('\ttime: {}'.format(tstr), end='\r')
