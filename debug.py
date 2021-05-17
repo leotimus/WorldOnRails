@@ -2,6 +2,9 @@ from autoagents.image_agent import ImageAgent
 import torch
 
 # split input into smaller sublist, one input might contain 1001 entries
+from explainer.explainer import Explainer
+
+
 def split_data(start_index, n):
     Ls = torch.load('experiments/flush_1620568574409.data')
     data = []
@@ -9,21 +12,17 @@ def split_data(start_index, n):
         data.append(Ls[start_index + i])
     torch.save(data, f'experiments/flush_1620568574409_{start_index}_{n}.data')
 
-
-def run_all(config, data):
-    imageAgent = ImageAgent(config)
-    Ls = torch.load(data)
-    imageAgent.saveSaliencyVideo(Ls)
-
 def run_all_ffmpeg(config, data):
-    imageAgent = ImageAgent(config)
-    Ls = torch.load(data)
-    imageAgent.saveSaliencyVideoFFMpeg(Ls)
+    image_agent = ImageAgent(config)
+    data = torch.load(data)
+    explainer = Explainer(image_agent, data)
+    explainer.explain()
 
 def run_analzyse_data_set(config, data):
-    imageAgent = ImageAgent(config)
-    Ls = torch.load(data)
-    imageAgent.analzye_data(Ls)
+    image_agent = ImageAgent(config)
+    data = torch.load(data)
+    explainer = Explainer(image_agent, data)
+    explainer.analzye_data(data)
 
 
 if __name__ == '__main__':
