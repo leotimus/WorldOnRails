@@ -48,12 +48,16 @@ class Explainer:
         f, ax = plt.subplots(2, 2)
         f.tight_layout()
 
-        # pool = ThreadPool(processes=2)
-        # pool.apply()
+        pool = ThreadPool(processes=2)
+        results = []
+        for i, s in enumerate(self.input_data):
+            r = pool.apply_async(self.create_and_save_saliency_ffmpeg, args=(s, i,))
+            results.append(r)
+
         with writer.saving(f, "experiments/" + movie_title_saliency, 400):
-            for i, s in enumerate(self.input_data):
-                logger.info(f'start process frame {i+1} of {len(self.input_data)}')
-                s_throttle, s_brake, s_steer = self.create_and_save_saliency_ffmpeg(s)
+            for i, r in enumerate(results):
+                s = self.input_data[i]
+                s_throttle, s_brake, s_steer = r.get()
                 ax[0, 0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
                 ax[0, 0].set_title('Original Frame')
                 ax[0, 0].set_aspect('equal')
@@ -70,9 +74,11 @@ class Explainer:
                 ax[1, 1].set_title('Saliency Frame Steer')
                 ax[1, 1].set_aspect('equal')
                 writer.grab_frame()
-                logger.info(f'done process frame {i+1} of {len(self.input_data)}')
 
         logger.info('Explainer finished.')
+        pool.close()
+        pool.terminate()
+        pool.join()
 
     def analzye_data(self, data):
         highest_brake = {"mean": 0, "index": 0}
@@ -87,11 +93,13 @@ class Explainer:
         logger.info(f'highest brake: {highest_brake}')
         logger.info(f'lowest_brake: {lowest_brake}')
 
-    def create_and_save_saliency_ffmpeg(self, info):
+    def create_and_save_saliency_ffmpeg(self, info, i):
+        logger.info(f'scoring frame {i + 1} of {len(self.input_data)}')
         saliency = self.score_frame(info, density=5, radius=5)
         saliency_img_throttle = self.apply_saliency(saliency[0], info.wide_rgb, channel=0)
         saliency_img_brake = self.apply_saliency(saliency[1], info.wide_rgb, channel=1)
         saliency_img_steer = self.apply_saliency(saliency[2], info.wide_rgb, channel=2)
+        logger.info(f'scored frame {i + 1} of {len(self.input_data)}')
         return saliency_img_throttle, saliency_img_brake, saliency_img_steer
 
     def score_frame(self, saliency_info, density=10, radius=5):
@@ -183,7 +191,7 @@ class Explainer:
                                            scores_denoised_steer)
         erased_gray_score_steer = skimage.color.rgb2gray(erased_gray_score_steer)
         # FIXME erased_gray_score_steer.max() = 0?
-        logger.info(f'pmax_steer={pmax_steer}, erased_gray_score_steer={erased_gray_score_steer}, erased_gray_score_steer.max()={erased_gray_score_steer.max()}')
+        # logger.info(f'pmax_steer={pmax_steer}, erased_gray_score_steer={erased_gray_score_steer}, erased_gray_score_steer.max()={erased_gray_score_steer.max()}')
         new_res_steer = pmax_steer * erased_gray_score_steer / erased_gray_score_steer.max()
         # cv2.imwrite(f'experiments/scores_denoised_{log}_{time_stamp}_lanczos.png', scores_denoised_throttle)
         # cv2.imwrite(f'experiments/scores_denoised_outgrayed_larger_scale_{log}_{time_stamp}_lanczos.png', erased_gray_score_throttle)
