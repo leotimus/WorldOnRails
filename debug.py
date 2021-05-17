@@ -3,6 +3,7 @@ import torch
 
 # split input into smaller sublist, one input might contain 1001 entries
 from explainer.explainer import Explainer
+from explainer.utils import logger
 
 
 def split_data(start_index, n):
@@ -13,6 +14,7 @@ def split_data(start_index, n):
     torch.save(data, f'experiments/flush_1620568574409_{start_index}_{n}.data')
 
 def run_all_ffmpeg(config, data):
+    logger.info(f'Initializing rails CameraModel with config: {config}')
     image_agent = ImageAgent(config)
     data = torch.load(data)
     explainer = Explainer(image_agent, data)

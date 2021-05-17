@@ -9,7 +9,6 @@ class CameraModel(nn.Module):
     def __init__(self, config, num_cmds=6):
         super().__init__()
 
-        print(f'Initializing rails CameraModel with config: {config}')
         # Configs
         self.num_cmds   = num_cmds
         self.num_steers = config['num_steers']

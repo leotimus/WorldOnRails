@@ -1,5 +1,6 @@
 from datetime import datetime
 import time
+from multiprocessing.pool import ThreadPool
 
 import cv2
 import numpy as np
@@ -14,7 +15,7 @@ from scipy.ndimage import gaussian_filter
 from skimage import img_as_float, img_as_ubyte
 
 from autoagents.image_agent import ImageAgent
-from explainer.utils import get_time_mils
+from explainer.utils import get_time_mils, logger, timestamp
 
 
 class Explainer:
@@ -23,11 +24,9 @@ class Explainer:
         self.input_data = input_data
 
     def explain(self):
-        tz = pytz.timezone('Europe/Berlin')
-        time_stamp = str(datetime.now(tz))
-        start = time.time()
-        movie_title_saliency = "original_saliency_compare_video_{}_{}.mp4".format(int(round(time.time() * 1000)),
-                                                                                  time_stamp)  # f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        # f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
+        logger.info('Explainer starts.')
+        movie_title_saliency = "original_saliency_compare_video_{}_{}.mp4".format(int(round(time.time() * 1000)), timestamp())
         FFMpegWriter = animation.writers['ffmpeg']
         metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
@@ -48,25 +47,32 @@ class Explainer:
         """
         f, ax = plt.subplots(2, 2)
         f.tight_layout()
-        with writer.saving(f, "experiments/" + movie_title_saliency, 75):
-            for s in self.input_data:
+
+        # pool = ThreadPool(processes=2)
+        # pool.apply()
+        with writer.saving(f, "experiments/" + movie_title_saliency, 400):
+            for i, s in enumerate(self.input_data):
+                logger.info(f'start process frame {i+1} of {len(self.input_data)}')
                 s_throttle, s_brake, s_steer = self.create_and_save_saliency_ffmpeg(s)
                 ax[0, 0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
                 ax[0, 0].set_title('Original Frame')
                 ax[0, 0].set_aspect('equal')
+
                 ax[0, 1].imshow(cv2.cvtColor(s_throttle, cv2.COLOR_BGR2RGB))
                 ax[0, 1].set_title('Saliency Frame Throttle')
                 ax[0, 1].set_aspect('equal')
+
                 ax[1, 0].imshow(cv2.cvtColor(s_brake, cv2.COLOR_BGR2RGB))
                 ax[1, 0].set_title('Saliency Frame Brake')
                 ax[1, 0].set_aspect('equal')
+
                 ax[1, 1].imshow(cv2.cvtColor(s_steer, cv2.COLOR_BGR2RGB))
                 ax[1, 1].set_title('Saliency Frame Steer')
                 ax[1, 1].set_aspect('equal')
                 writer.grab_frame()
-                tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
-                print('\ttime: {}'.format(tstr), end='\r')
-        print('\nfinished.')
+                logger.info(f'done process frame {i+1} of {len(self.input_data)}')
+
+        logger.info('Explainer finished.')
 
     def analzye_data(self, data):
         highest_brake = {"mean": 0, "index": 0}
@@ -78,11 +84,11 @@ class Explainer:
             if torch.mean(s.brake_logits) < lowest_brake["mean"]:
                 lowest_brake["mean"] = torch.mean(s.brake_logits)
                 lowest_brake["index"] = index
-        print(highest_brake)
-        print(lowest_brake)
+        logger.info(f'highest brake: {highest_brake}')
+        logger.info(f'lowest_brake: {lowest_brake}')
 
     def create_and_save_saliency_ffmpeg(self, info):
-        saliency = self.score_frame(info, density=10, radius=10)
+        saliency = self.score_frame(info, density=5, radius=5)
         saliency_img_throttle = self.apply_saliency(saliency[0], info.wide_rgb, channel=0)
         saliency_img_brake = self.apply_saliency(saliency[1], info.wide_rgb, channel=1)
         saliency_img_steer = self.apply_saliency(saliency[2], info.wide_rgb, channel=2)
@@ -92,26 +98,32 @@ class Explainer:
         # r: radius of blur
         # d: density of scores (if d==1, then get a score for every pixel...
         #    if d==2 then every other, which is 25% of total pixels for a 2D image)
-        wide_rgb = img_as_float(
-            skimage.color.rgb2gray(saliency_info.wide_rgb))  # Converting to gray picture to be normalize and 2d arrau
+        # Converting to gray picture to be normalize and 2d array
+        wide_rgb = saliency_info.wide_rgb.copy()
+        # wide_rgb = imresize(wide_rgb, size=[120, 240], interp='lanczos')
+        wide_rgb = img_as_float(skimage.color.rgb2gray(wide_rgb))
         steer_Logits = saliency_info.steer_logits
         throt_Logits = saliency_info.throt_logits
         brake_Logits = saliency_info.brake_logits
         cmd_value = saliency_info.cmd_value
 
-        scores_throttle = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
-        scores_steer = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
-        scores_brake = np.zeros((int(240 / density) + 1, int(480 / density) + 1))  # saliency scores S(t,i,j)
-        for i in range(0, 240, density):
-            for j in range(0, 480, density):
-                masking_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240, 480], radius=radius)
+        # down_scaled = imresize(wide_rgb, size=[120, 240], interp='lanczos')
+        # cv2.imwrite(f'experiments/downscaled_{timestamp()}.png', down_scaled)
+        scores_throttle = np.zeros((int(120 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
+        scores_steer = np.zeros((int(120 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
+        scores_brake = np.zeros((int(120 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
 
-                masking_wide_rgp = skimage.color.gray2rgb(masking_wide_rgp)
-                masking_wide_rgp = img_as_ubyte(masking_wide_rgp)
+        for i in range(0, 120, density):
+            for j in range(0, 240, density):
+                masked_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240, 480], radius=radius)
 
-                _masking_wide_rgp = masking_wide_rgp[self.agent.wide_crop_top:, :, :3]
+                masked_wide_rgp = skimage.color.gray2rgb(masked_wide_rgp)
+                masked_wide_rgp = img_as_ubyte(masked_wide_rgp)
+
+                _masking_wide_rgp = masked_wide_rgp[self.agent.wide_crop_top:, :, :3]
                 _masking_wide_rgp = _masking_wide_rgp[..., ::-1].copy()
                 _masking_wide_rgp = torch.tensor(_masking_wide_rgp[None]).float().permute(0, 3, 1, 2).to(self.agent.device)
+
                 steer_logits, throt_logits, brake_logits = self.agent.image_model.policy(_masking_wide_rgp, None, cmd_value)
 
                 x = int(i / density)
@@ -170,6 +182,8 @@ class Explainer:
         erased_gray_score_steer = np.where(scores_denoised_steer <= movsd_steer + 55, 0,
                                            scores_denoised_steer)
         erased_gray_score_steer = skimage.color.rgb2gray(erased_gray_score_steer)
+        # FIXME erased_gray_score_steer.max() = 0?
+        logger.info(f'pmax_steer={pmax_steer}, erased_gray_score_steer={erased_gray_score_steer}, erased_gray_score_steer.max()={erased_gray_score_steer.max()}')
         new_res_steer = pmax_steer * erased_gray_score_steer / erased_gray_score_steer.max()
         # cv2.imwrite(f'experiments/scores_denoised_{log}_{time_stamp}_lanczos.png', scores_denoised_throttle)
         # cv2.imwrite(f'experiments/scores_denoised_outgrayed_larger_scale_{log}_{time_stamp}_lanczos.png', erased_gray_score_throttle)
