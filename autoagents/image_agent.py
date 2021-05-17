@@ -196,16 +196,18 @@ class ImageAgent(AutonomousAgent):
         movsd_throttle = np.argmax(np.bincount(scores_denoised_throttle.flat))
         movsd_brake = np.argmax(np.bincount(scores_denoised_brake.flat))
         movsd_steer = np.argmax(np.bincount(scores_denoised_steer.flat))
-        erased_gray_score_throttle = np.where(scores_denoised_throttle <= movsd_throttle + 55, 0, scores_denoised_throttle)
+        erased_gray_score_throttle = np.where(scores_denoised_throttle <= movsd_throttle + 65, 0, scores_denoised_throttle)
+        #cv2.imwrite(f'experiments/scores_throttle_denoised_erased_special_{log}_{time_stamp}_lanczos.png', erased_gray_score_throttle)
+        #print("Fag")
         erased_gray_score_throttle = skimage.color.rgb2gray(erased_gray_score_throttle)
         new_res_throttle = pmax_throttle * erased_gray_score_throttle / erased_gray_score_throttle.max()
 
-        erased_gray_score_brake = np.where(scores_denoised_brake <= movsd_brake + 55, 0,
+        erased_gray_score_brake = np.where(scores_denoised_brake <= movsd_brake + 65, 0,
                                               scores_denoised_brake)
         erased_gray_score_brake = skimage.color.rgb2gray(erased_gray_score_brake)
         new_res_brake = pmax_brake* erased_gray_score_brake / erased_gray_score_brake.max()
 
-        erased_gray_score_steer = np.where(scores_denoised_steer <= movsd_steer + 55, 0,
+        erased_gray_score_steer = np.where(scores_denoised_steer <= movsd_steer + 65, 0,
                                               scores_denoised_steer)
         erased_gray_score_steer = skimage.color.rgb2gray(erased_gray_score_steer)
         new_res_steer = pmax_steer * erased_gray_score_steer / erased_gray_score_steer.max()
