@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 import time
 from multiprocessing.pool import ThreadPool
@@ -117,12 +118,15 @@ class Explainer:
 
         # down_scaled = imresize(wide_rgb, size=[120, 240], interp='lanczos')
         # cv2.imwrite(f'experiments/downscaled_{timestamp()}.png', down_scaled)
-        scores_throttle = np.zeros((int(120 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
-        scores_steer = np.zeros((int(120 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
-        scores_brake = np.zeros((int(120 / density) + 1, int(240 / density) + 1))  # saliency scores S(t,i,j)
 
-        for i in range(0, 120, density):
-            for j in range(0, 240, density):
+        target_height = 240
+        target_width = 480
+        scores_throttle = np.zeros((int(target_height / density) + 1, int(target_width / density) + 1))  # saliency scores S(t,i,j)
+        scores_steer = np.zeros((int(target_height / density) + 1, int(target_width / density) + 1))  # saliency scores S(t,i,j)
+        scores_brake = np.zeros((int(target_height / density) + 1, int(target_width / density) + 1))  # saliency scores S(t,i,j)
+
+        for i in range(0, target_height, density):
+            for j in range(0, target_width, density):
                 masked_wide_rgp = self.create_masking(wide_rgb, center=[i, j], size=[240, 480], radius=radius)
 
                 masked_wide_rgp = skimage.color.gray2rgb(masked_wide_rgp)
@@ -171,6 +175,11 @@ class Explainer:
         score_image_throttle = cv2.imread(score_img_name_throttle)
         score_image_brake = cv2.imread(score_img_name_brake)
         score_image_steer = cv2.imread(score_img_name_steer)
+
+        os.remove(score_img_name_throttle)
+        os.remove(score_img_name_brake)
+        os.remove(score_img_name_steer)
+
         scores_denoised_throttle = cv2.fastNlMeansDenoising(score_image_throttle, None, 10, 7, 21)
         scores_denoised_brake = cv2.fastNlMeansDenoising(score_image_brake, None, 10, 7, 21)
         scores_denoised_steer = cv2.fastNlMeansDenoising(score_image_steer, None, 10, 7, 21)
