@@ -134,5 +134,5 @@ dmypy.json
 .pyre/
 
 .idea/
-/saved_model/leaderboard/*.th
-/saved_model/nocrash/*.th
+saved_model/
+experiments/
