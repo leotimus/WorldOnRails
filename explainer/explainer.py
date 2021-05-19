@@ -169,19 +169,25 @@ class Explainer:
         movsd_throttle = np.argmax(np.bincount(scores_denoised_throttle.flat))
         movsd_brake = np.argmax(np.bincount(scores_denoised_brake.flat))
         movsd_steer = np.argmax(np.bincount(scores_denoised_steer.flat))
-        erased_gray_score_throttle = np.where(scores_denoised_throttle <= movsd_throttle + 55, 0,
-                                              scores_denoised_throttle)
-        erased_gray_score_throttle = skimage.color.rgb2gray(erased_gray_score_throttle)
+        #erased_gray_score_throttle = np.where(scores_denoised_throttle <= movsd_throttle + 20, 0,
+        #                                      scores_denoised_throttle)
+        erased_gray_score_throttle = skimage.color.rgb2gray(scores_denoised_throttle)
+        erased_gray_score_throttle = np.where(erased_gray_score_throttle <= 0.66, 0,
+                                               erased_gray_score_throttle)
         new_res_throttle = pmax_throttle * erased_gray_score_throttle / erased_gray_score_throttle.max()
 
-        erased_gray_score_brake = np.where(scores_denoised_brake <= movsd_brake + 55, 0,
-                                           scores_denoised_brake)
-        erased_gray_score_brake = skimage.color.rgb2gray(erased_gray_score_brake)
+        #erased_gray_score_brake = np.where(scores_denoised_brake <= movsd_brake + 20, 0,
+        #                                  scores_denoised_brake)
+        erased_gray_score_brake = skimage.color.rgb2gray(scores_denoised_brake)
+        erased_gray_score_brake = np.where(erased_gray_score_brake <= 0.66, 0,
+                                              erased_gray_score_brake)
         new_res_brake = pmax_brake * erased_gray_score_brake / erased_gray_score_brake.max()
 
-        erased_gray_score_steer = np.where(scores_denoised_steer <= movsd_steer + 55, 0,
-                                           scores_denoised_steer)
-        erased_gray_score_steer = skimage.color.rgb2gray(erased_gray_score_steer)
+        #erased_gray_score_steer = np.where(scores_denoised_steer <= movsd_steer + 20, 0,
+                                           #scores_denoised_steer)
+        erased_gray_score_steer = skimage.color.rgb2gray(scores_denoised_steer)
+        erased_gray_score_steer = np.where(erased_gray_score_steer <= 0.66, 0,
+                                           erased_gray_score_steer)
         # FIXME erased_gray_score_steer.max() = 0?
         logger.info(f'pmax_steer={pmax_steer}, erased_gray_score_steer={erased_gray_score_steer}, erased_gray_score_steer.max()={erased_gray_score_steer.max()}')
         new_res_steer = pmax_steer * erased_gray_score_steer / erased_gray_score_steer.max()
