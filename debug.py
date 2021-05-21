@@ -17,7 +17,14 @@ def run_all_ffmpeg(config, data):
     logger.info(f'Initializing rails CameraModel with config: {config}')
     image_agent = ImageAgent(config)
     data = torch.load(data)
-    explainer = Explainer(image_agent, data)
+    explainer = Explainer(image_agent, data, [])
+    explainer.explain()
+
+def run_all_ffmpeg_remote(config, data, hosts):
+    logger.info(f'Initializing rails CameraModel with config: {config}')
+    image_agent = ImageAgent(config)
+    data = torch.load(data)
+    explainer = Explainer(image_agent, data, hosts)
     explainer.explain()
 
 def run_analzyse_data_set(config, data):
@@ -28,7 +35,9 @@ def run_analzyse_data_set(config, data):
 
 
 if __name__ == '__main__':
-    #split_data(970, 1)
+    # split_data(800, 160)
     #run_all('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_970_1.data')
     #run_analzyse_data_set('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409.data')
-    run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_970_1.data')
+    run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_800_160.data')
+    # run_all_ffmpeg_remote('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_200_2.data',
+    #                       ['http://127.0.0.1:5000/'])

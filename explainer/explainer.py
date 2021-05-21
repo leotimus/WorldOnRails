@@ -1,6 +1,10 @@
+import base64
+import io
+import json
 import os
 from datetime import datetime
 import time
+from multiprocessing import Queue
 from multiprocessing.pool import ThreadPool
 
 import cv2
@@ -10,24 +14,34 @@ import skimage
 import skimage.io
 import skimage.color
 import torch
+import requests
+from flask import jsonify
 from matplotlib import animation, pyplot as plt
 from scipy.misc import imresize
 from scipy.ndimage import gaussian_filter
 from skimage import img_as_float, img_as_ubyte
 
 from autoagents.image_agent import ImageAgent
+from autoagents.image_agent_saliency import ImageAgentSaliency
+from explainer.remote_explainer import RemoteExplainer
 from explainer.utils import get_time_mils, logger, timestamp
 
 
 class Explainer:
-    def __init__(self, agent: ImageAgent, input_data: list):
+    def __init__(self, agent: ImageAgent, input_data: list, hosts: list):
         self.agent = agent
         self.input_data = input_data
+        self.hosts = hosts
+        self.explainers = Queue()
+        self.explainers.put('memory')
+        for host in self.hosts:
+            self.explainers.put(host)
 
     def explain(self):
         # f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
-        logger.info('Explainer starts.')
-        movie_title_saliency = "original_saliency_compare_video_{}_{}.mp4".format(int(round(time.time() * 1000)), timestamp())
+        logger.info(f'Explainer starts. Number of frame {len(self.input_data)}')
+        movie_title_saliency = "original_saliency_compare_video_{}_{}.mp4".format(int(round(time.time() * 1000)),
+                                                                                  timestamp())
         FFMpegWriter = animation.writers['ffmpeg']
         metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
         writer = FFMpegWriter(fps=8, metadata=metadata)
@@ -49,10 +63,11 @@ class Explainer:
         f, ax = plt.subplots(2, 2)
         f.tight_layout()
 
-        pool = ThreadPool(processes=2)
+        pool = ThreadPool(processes=len(self.hosts)+1)
         results = []
+
         for i, s in enumerate(self.input_data):
-            r = pool.apply_async(self.create_and_save_saliency_ffmpeg, args=(s, i,))
+            r = pool.apply_async(self.process_saliency_ffmpeg, args=(s, i,))
             results.append(r)
 
         with writer.saving(f, "experiments/" + movie_title_saliency, 400):
@@ -81,6 +96,15 @@ class Explainer:
         pool.terminate()
         pool.join()
 
+    def process_saliency_ffmpeg(self, s: ImageAgentSaliency, idx: int):
+        explainer = self.explainers.get(block=True)
+        if explainer == 'memory':
+            throttle, brake, steer = self.create_and_save_saliency_ffmpeg(s, idx)
+        else:
+            throttle, brake, steer = RemoteExplainer(explainer).create_and_save_saliency_ffmpeg(s, idx)
+        self.explainers.put(explainer)
+        return throttle, brake, steer
+
     def analzye_data(self, data):
         highest_brake = {"mean": 0, "index": 0}
         lowest_brake = {"mean": 1000, "index": 0}
@@ -94,13 +118,13 @@ class Explainer:
         logger.info(f'highest brake: {highest_brake}')
         logger.info(f'lowest_brake: {lowest_brake}')
 
-    def create_and_save_saliency_ffmpeg(self, info, i):
-        logger.info(f'scoring frame {i + 1} of {len(self.input_data)}')
-        saliency = self.score_frame(info, density=5, radius=5)
+    def create_and_save_saliency_ffmpeg(self, info: ImageAgentSaliency, i: int):
+        logger.info(f'scoring frame {i + 1}')
+        saliency = self.score_frame(info, density=10, radius=10)
         saliency_img_throttle = self.apply_saliency(saliency[0], info.wide_rgb, channel=0)
         saliency_img_brake = self.apply_saliency(saliency[1], info.wide_rgb, channel=1)
         saliency_img_steer = self.apply_saliency(saliency[2], info.wide_rgb, channel=2)
-        logger.info(f'scored frame {i + 1} of {len(self.input_data)}')
+        logger.info(f'scored frame {i + 1}')
         return saliency_img_throttle, saliency_img_brake, saliency_img_steer
 
     def score_frame(self, saliency_info, density=10, radius=5):
@@ -121,9 +145,12 @@ class Explainer:
 
         target_height = 240
         target_width = 480
-        scores_throttle = np.zeros((int(target_height / density) + 1, int(target_width / density) + 1))  # saliency scores S(t,i,j)
-        scores_steer = np.zeros((int(target_height / density) + 1, int(target_width / density) + 1))  # saliency scores S(t,i,j)
-        scores_brake = np.zeros((int(target_height / density) + 1, int(target_width / density) + 1))  # saliency scores S(t,i,j)
+        scores_throttle = np.zeros(
+            (int(target_height / density) + 1, int(target_width / density) + 1))  # saliency scores S(t,i,j)
+        scores_steer = np.zeros(
+            (int(target_height / density) + 1, int(target_width / density) + 1))  # saliency scores S(t,i,j)
+        scores_brake = np.zeros(
+            (int(target_height / density) + 1, int(target_width / density) + 1))  # saliency scores S(t,i,j)
 
         for i in range(0, target_height, density):
             for j in range(0, target_width, density):
@@ -134,9 +161,11 @@ class Explainer:
 
                 _masking_wide_rgp = masked_wide_rgp[self.agent.wide_crop_top:, :, :3]
                 _masking_wide_rgp = _masking_wide_rgp[..., ::-1].copy()
-                _masking_wide_rgp = torch.tensor(_masking_wide_rgp[None]).float().permute(0, 3, 1, 2).to(self.agent.device)
+                _masking_wide_rgp = torch.tensor(_masking_wide_rgp[None]).float().permute(0, 3, 1, 2).to(
+                    self.agent.device)
 
-                steer_logits, throt_logits, brake_logits = self.agent.image_model.policy(_masking_wide_rgp, None, cmd_value)
+                steer_logits, throt_logits, brake_logits = self.agent.image_model.policy(_masking_wide_rgp, None,
+                                                                                         cmd_value)
 
                 x = int(i / density)
                 y = int(j / density)
