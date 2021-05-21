@@ -1,5 +1,6 @@
 import math
 import time
+import os
 
 import carla
 import numpy as np
@@ -40,7 +41,10 @@ class ImageAgent(AutonomousAgent):
         self.device = torch.device('cuda')
 
         self.image_model = CameraModel(config).to(self.device)
-        self.image_model.load_state_dict(torch.load(self.main_model_dir))
+        path = self.main_model_dir
+        if not os.path.exists(path):
+            path = os.path.join(os.getcwd(), path)
+        self.image_model.load_state_dict(torch.load(path))
         self.image_model.eval()
 
         self.vizs = []
