@@ -38,6 +38,6 @@ if __name__ == '__main__':
     # split_data(800, 160)
     #run_all('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_970_1.data')
     #run_analzyse_data_set('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409.data')
-    run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_800_160.data')
-    # run_all_ffmpeg_remote('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_200_2.data',
-    #                       ['http://127.0.0.1:5000/'])
+    # run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_800_160.data')
+    run_all_ffmpeg_remote('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_200_2.data',
+                          ['http://34.90.169.40:5000/'])
