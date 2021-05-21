@@ -178,14 +178,17 @@ class Explainer:
 
         pmax_throttle = scores_throttle.max()
         scores_throttle = imresize(scores_throttle, size=[240, 480], interp='lanczos').astype(np.float32)
+        scores_throttle_bilinear = imresize(scores_throttle, size=[240, 480], interp='bilinear').astype(np.float32)
         res_throttle = pmax_throttle * scores_throttle / scores_throttle.max()
 
         pmax_brake = scores_brake.max()
         scores_brake = imresize(scores_brake, size=[240, 480], interp='lanczos').astype(np.float32)
+        scores_brake_bilinear = imresize(scores_brake, size=[240, 480], interp='bilinear').astype(np.float32)
         res_brake = pmax_brake * scores_brake / scores_brake.max()
 
         pmax_steer = scores_steer.max()
         scores_steer = imresize(scores_steer, size=[240, 480], interp='lanczos').astype(np.float32)
+        scores_steer_bilinear = imresize(scores_steer, size=[240, 480], interp='bilinear').astype(np.float32)
         res_steer = pmax_steer * scores_steer / scores_steer.max()
 
         # res = res/100.
@@ -193,6 +196,11 @@ class Explainer:
         log = get_time_mils()
         tz = pytz.timezone('Europe/Berlin')
         time_stamp = str(datetime.now(tz))
+
+        cv2.imwrite(f'experiments/res_throttle_{log}_{time_stamp}_lanczos.png', res_throttle)
+        cv2.imwrite(f'experiments/res_brake_{log}_{time_stamp}_lanczos.png', res_brake)
+        cv2.imwrite(f'experiments/res_steer_{log}_{time_stamp}_lanczos.png', res_steer)
+
         score_img_name_throttle = f'experiments/scores_throttle_{log}_{time_stamp}_lanczos.png'
         score_img_name_brake = f'experiments/scores_brake_{log}_{time_stamp}_lanczos.png'
         score_img_name_steer = f'experiments/scores_steer_{log}_{time_stamp}_lanczos.png'
@@ -200,41 +208,50 @@ class Explainer:
         cv2.imwrite(score_img_name_throttle, scores_throttle)
         cv2.imwrite(score_img_name_brake, scores_brake)
         cv2.imwrite(score_img_name_steer, scores_steer)
+        cv2.imwrite(f'experiments/scores_throttle_{log}_{time_stamp}_bilinear.png', scores_throttle_bilinear)
+        cv2.imwrite(f'experiments/scores_brake_{log}_{time_stamp}_bilinear.png', scores_brake_bilinear)
+        cv2.imwrite(f'experiments/scores_steer_{log}_{time_stamp}_bilinear.png', scores_steer_bilinear)
         # cv2.imwrite(res_img_name_throttle, res_throttle)
         score_image_throttle = cv2.imread(score_img_name_throttle)
         score_image_brake = cv2.imread(score_img_name_brake)
         score_image_steer = cv2.imread(score_img_name_steer)
 
-        os.remove(score_img_name_throttle)
-        os.remove(score_img_name_brake)
-        os.remove(score_img_name_steer)
+        #os.remove(score_img_name_throttle)
+        #os.remove(score_img_name_brake)
+        #os.remove(score_img_name_steer)
 
-        scores_denoised_throttle = cv2.fastNlMeansDenoising(score_image_throttle, None, 10, 7, 21)
-        scores_denoised_brake = cv2.fastNlMeansDenoising(score_image_brake, None, 10, 7, 21)
-        scores_denoised_steer = cv2.fastNlMeansDenoising(score_image_steer, None, 10, 7, 21)
-        movsd_throttle = np.argmax(np.bincount(scores_denoised_throttle.flat))
-        movsd_brake = np.argmax(np.bincount(scores_denoised_brake.flat))
-        movsd_steer = np.argmax(np.bincount(scores_denoised_steer.flat))
-        erased_gray_score_throttle = np.where(scores_denoised_throttle <= movsd_throttle + 55, 0,
-                                              scores_denoised_throttle)
-        erased_gray_score_throttle = skimage.color.rgb2gray(erased_gray_score_throttle)
-        new_res_throttle = pmax_throttle * erased_gray_score_throttle / erased_gray_score_throttle.max()
+        score_denoised_throttle = cv2.fastNlMeansDenoising(score_image_throttle, None, 10, 7, 21)
+        score_denoised_brake = cv2.fastNlMeansDenoising(score_image_brake, None, 10, 7, 21)
+        score_denoised_steer = cv2.fastNlMeansDenoising(score_image_steer, None, 10, 7, 21)
+        cv2.imwrite(f'experiments/scores_throttle_denoised_{log}_{time_stamp}_lanczos.png', score_denoised_throttle)
+        cv2.imwrite(f'experiments/scores_brake_denoised_{log}_{time_stamp}_lanczos.png', score_denoised_brake)
+        cv2.imwrite(f'experiments/scores_steer_denoised_{log}_{time_stamp}_lanczos.png', score_denoised_steer)
+        movsd_throttle = np.argmax(np.bincount(score_denoised_throttle.flat))
+        movsd_brake = np.argmax(np.bincount(score_denoised_brake.flat))
+        movsd_steer = np.argmax(np.bincount(score_denoised_steer.flat))
+        score_pruned_throttle = np.where(score_denoised_throttle <= movsd_throttle + 20, 0,
+                                              score_denoised_throttle)
+        score_pruned_throttle = skimage.color.rgb2gray(score_pruned_throttle)
+        res_throttle_pruned = pmax_throttle * score_pruned_throttle / score_pruned_throttle.max()
 
-        erased_gray_score_brake = np.where(scores_denoised_brake <= movsd_brake + 55, 0,
-                                           scores_denoised_brake)
-        erased_gray_score_brake = skimage.color.rgb2gray(erased_gray_score_brake)
-        new_res_brake = pmax_brake * erased_gray_score_brake / erased_gray_score_brake.max()
+        score_pruned_brake = np.where(score_denoised_brake <= movsd_brake + 20, 0,
+                                           score_denoised_brake)
+        score_pruned_brake = skimage.color.rgb2gray(score_pruned_brake)
+        res_brake_pruned = pmax_brake * score_pruned_brake / score_pruned_brake.max()
 
-        erased_gray_score_steer = np.where(scores_denoised_steer <= movsd_steer + 55, 0,
-                                           scores_denoised_steer)
-        erased_gray_score_steer = skimage.color.rgb2gray(erased_gray_score_steer)
+        score_pruned_steer = np.where(score_denoised_steer <= movsd_steer + 20, 0,
+                                           score_denoised_steer)
+        score_pruned_steer = skimage.color.rgb2gray(score_pruned_steer)
         # FIXME erased_gray_score_steer.max() = 0?
         # logger.info(f'pmax_steer={pmax_steer}, erased_gray_score_steer={erased_gray_score_steer}, erased_gray_score_steer.max()={erased_gray_score_steer.max()}')
-        new_res_steer = pmax_steer * erased_gray_score_steer / erased_gray_score_steer.max()
-        # cv2.imwrite(f'experiments/scores_denoised_{log}_{time_stamp}_lanczos.png', scores_denoised_throttle)
-        # cv2.imwrite(f'experiments/scores_denoised_outgrayed_larger_scale_{log}_{time_stamp}_lanczos.png', erased_gray_score_throttle)
-        # cv2.imwrite(f'experiments/res_denoised_outgrayed_larger_scale{log}_{time_stamp}_lanczos.png', new_res_throttle)
-        return [new_res_throttle, new_res_brake, new_res_steer]
+        res_steer_pruned = pmax_steer * score_pruned_steer / score_pruned_steer.max()
+        cv2.imwrite(f'experiments/scores_throttle_denoised_pruned{log}_{time_stamp}_lanczos.png', score_pruned_throttle)
+        cv2.imwrite(f'experiments/scores_brake_denoised_pruned{log}_{time_stamp}_lanczos.png', score_pruned_brake)
+        cv2.imwrite(f'experiments/scores_steer_denoised_pruned{log}_{time_stamp}_lanczos.png', score_pruned_steer)
+        cv2.imwrite(f'experiments/res_throttle_denoised_pruned{log}_{time_stamp}_lanczos.png', res_throttle_pruned)
+        cv2.imwrite(f'experiments/res_brake_denoised_pruned{log}_{time_stamp}_lanczos.png', res_brake_pruned)
+        cv2.imwrite(f'experiments/res_steer_denoised_pruned{log}_{time_stamp}_lanczos.png', res_steer_pruned)
+        return [res_throttle_pruned, res_brake_pruned, res_steer_pruned]
 
     def apply_saliency(self, saliency, frame, fudge_factor=400, channel=0, sigma=0):
         # sometimes saliency maps are a bit clearer if you blur them
