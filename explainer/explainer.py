@@ -28,9 +28,12 @@ class Explainer:
         self.input_data = input_data
         self.hosts = hosts
         self.explainers = Queue()
-        self.explainers.put('memory')
         for host in self.hosts:
             self.explainers.put(host)
+        if os.cpu_count() >= 8:
+            num_threads = (os.cpu_count() - 2) / 2
+            logger.info(f'Setting pytorch to use {num_threads} cpus.')
+            torch.set_num_threads(int(num_threads))
 
     def explain(self):
         # f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
@@ -58,7 +61,9 @@ class Explainer:
         f, ax = plt.subplots(2, 2)
         f.tight_layout()
 
-        pool = ThreadPool(processes=len(self.hosts)+1)
+        pool_size = len(self.hosts) + 1
+        logger.info(f'Create thread pool size {pool_size}.')
+        pool = ThreadPool(processes=pool_size)
         results = []
 
         for i, s in enumerate(self.input_data):
@@ -94,8 +99,10 @@ class Explainer:
     def process_saliency_ffmpeg(self, s: ImageAgentSaliency, idx: int):
         explainer = self.explainers.get(block=True)
         if explainer == 'memory':
+            logger.info(f'Submit frame {idx + 1} to local memory explainer.')
             throttle, brake, steer = self.create_and_save_saliency_ffmpeg(s, idx)
         else:
+            logger.info(f'Submit frame {idx + 1} to remote explainer at {explainer}.')
             throttle, brake, steer = RemoteExplainer(explainer).create_and_save_saliency_ffmpeg(s, idx)
         self.explainers.put(explainer)
         return throttle, brake, steer
