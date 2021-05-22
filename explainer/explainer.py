@@ -1,9 +1,6 @@
-import base64
-import io
-import json
 import os
-from datetime import datetime
 import time
+from datetime import datetime
 from multiprocessing import Queue
 from multiprocessing.pool import ThreadPool
 
@@ -11,11 +8,9 @@ import cv2
 import numpy as np
 import pytz
 import skimage
-import skimage.io
 import skimage.color
+import skimage.io
 import torch
-import requests
-from flask import jsonify
 from matplotlib import animation, pyplot as plt
 from scipy.misc import imresize
 from scipy.ndimage import gaussian_filter
@@ -197,9 +192,9 @@ class Explainer:
         score_img_name_brake = f'experiments/scores_brake_{log}_{time_stamp}_lanczos.png'
         score_img_name_steer = f'experiments/scores_steer_{log}_{time_stamp}_lanczos.png'
         # res_img_name_throttle = f'experiments/res_{log}_{time_stamp}_lanczos.png'
-        cv2.imwrite(score_img_name_throttle, scores_throttle)
-        cv2.imwrite(score_img_name_brake, scores_brake)
-        cv2.imwrite(score_img_name_steer, scores_steer)
+        cv2.imwrite(score_img_name_throttle, res_throttle)
+        cv2.imwrite(score_img_name_brake, res_brake)
+        cv2.imwrite(score_img_name_steer, res_steer)
         # cv2.imwrite(res_img_name_throttle, res_throttle)
         score_image_throttle = cv2.imread(score_img_name_throttle)
         score_image_brake = cv2.imread(score_img_name_brake)
