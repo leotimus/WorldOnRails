@@ -231,19 +231,25 @@ class Explainer:
         movsd_steer = np.argmax(np.bincount(score_denoised_steer.flat))
         score_pruned_throttle = np.where(score_denoised_throttle <= movsd_throttle + 20, 0,
                                               score_denoised_throttle)
+        #score_pruned_throttle = score_denoised_throttle
         score_pruned_throttle = skimage.color.rgb2gray(score_pruned_throttle)
+        pmax_throttle = score_pruned_throttle.max()
         res_throttle_pruned = pmax_throttle * score_pruned_throttle / score_pruned_throttle.max()
 
         score_pruned_brake = np.where(score_denoised_brake <= movsd_brake + 20, 0,
                                            score_denoised_brake)
+        #score_pruned_brake = score_denoised_brake
         score_pruned_brake = skimage.color.rgb2gray(score_pruned_brake)
+        pmax_brake = score_pruned_brake.max()
         res_brake_pruned = pmax_brake * score_pruned_brake / score_pruned_brake.max()
 
         score_pruned_steer = np.where(score_denoised_steer <= movsd_steer + 20, 0,
                                            score_denoised_steer)
+        #score_pruned_steer = score_denoised_steer
         score_pruned_steer = skimage.color.rgb2gray(score_pruned_steer)
         # FIXME erased_gray_score_steer.max() = 0?
         # logger.info(f'pmax_steer={pmax_steer}, erased_gray_score_steer={erased_gray_score_steer}, erased_gray_score_steer.max()={erased_gray_score_steer.max()}')
+        pmax_steer = score_pruned_steer.max()
         res_steer_pruned = pmax_steer * score_pruned_steer / score_pruned_steer.max()
         cv2.imwrite(f'experiments/scores_throttle_denoised_pruned{log}_{time_stamp}_lanczos.png', score_pruned_throttle)
         cv2.imwrite(f'experiments/scores_brake_denoised_pruned{log}_{time_stamp}_lanczos.png', score_pruned_brake)
