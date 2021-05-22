@@ -1,22 +1,16 @@
 import io
-import os
 
 import numpy
 import requests
 import torch
 
 from autoagents.image_agent_saliency import ImageAgentSaliency
-from explainer.utils import logger
 
 
 class RemoteExplainer:
 
     def __init__(self, host: str):
         self.host = host
-        if os.cpu_count() >= 8:
-            num_threads = (os.cpu_count() - 2) / 2
-            logger.info(f'Setting pytorch to use {num_threads} cpus.')
-            torch.set_num_threads(int(num_threads))
 
     def create_and_save_saliency_ffmpeg(self, info: ImageAgentSaliency, i: int):
         buffer = io.BytesIO()
