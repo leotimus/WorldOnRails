@@ -180,15 +180,15 @@ class Explainer:
 
         pmax_throttle = scores_throttle.max()
         scores_throttle = imresize(scores_throttle, size=[240, 480], interp='lanczos').astype(np.float32)
-        res_throttle = pmax_throttle * scores_throttle / scores_throttle.max()
+        # res_throttle = pmax_throttle * scores_throttle / scores_throttle.max()
 
         pmax_brake = scores_brake.max()
         scores_brake = imresize(scores_brake, size=[240, 480], interp='lanczos').astype(np.float32)
-        res_brake = pmax_brake * scores_brake / scores_brake.max()
+        # res_brake = pmax_brake * scores_brake / scores_brake.max()
 
         pmax_steer = scores_steer.max()
         scores_steer = imresize(scores_steer, size=[240, 480], interp='lanczos').astype(np.float32)
-        res_steer = pmax_steer * scores_steer / scores_steer.max()
+        # res_steer = pmax_steer * scores_steer / scores_steer.max()
 
         # res = res/100.
 
@@ -199,9 +199,9 @@ class Explainer:
         score_img_name_brake = f'experiments/scores_brake_{log}_{time_stamp}_lanczos.png'
         score_img_name_steer = f'experiments/scores_steer_{log}_{time_stamp}_lanczos.png'
         # res_img_name_throttle = f'experiments/res_{log}_{time_stamp}_lanczos.png'
-        cv2.imwrite(score_img_name_throttle, res_throttle)
-        cv2.imwrite(score_img_name_brake, res_brake)
-        cv2.imwrite(score_img_name_steer, res_steer)
+        cv2.imwrite(score_img_name_throttle, scores_throttle)
+        cv2.imwrite(score_img_name_brake, scores_brake)
+        cv2.imwrite(score_img_name_steer, scores_steer)
         # cv2.imwrite(res_img_name_throttle, res_throttle)
         score_image_throttle = cv2.imread(score_img_name_throttle)
         score_image_brake = cv2.imread(score_img_name_brake)
