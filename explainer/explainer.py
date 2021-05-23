@@ -1,5 +1,4 @@
 import os
-import time
 from datetime import datetime
 from multiprocessing import Queue
 from multiprocessing.pool import ThreadPool
@@ -39,60 +38,73 @@ class Explainer:
 
     def explain(self):
         # f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
-        logger.info(f'Explainer starts. Number of frame {len(self.input_data)}')
-        movie_title_saliency = f'original_saliency_compare_video_{int(get_time_mils())}_{timestamp()}.mp4'
-        FFMpegWriter = animation.writers['ffmpeg']
-        metadata = dict(title=movie_title_saliency, artist='Hephaestus', comment='carla saliency video.')
-        writer = FFMpegWriter(fps=8, metadata=metadata)
-        # Setup for Original grame and underneath Saliency Frame of one feature
-        """
-        f, ax = plt.subplots(2, figsize=[6, 6 * 1.3], dpi=75)
-        with writer.saving(f, "experiments/" + movie_title_saliency, 75):
-            for s in Ls:
-                saliency_frame = create_and_save_saliency_ffmpeg(self, s)
-                ax[0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
-                ax[0].set_title('Original Frame')
-                ax[1].imshow(cv2.cvtColor(saliency_frame, cv2.COLOR_BGR2RGB))
-                ax[1].set_title('Saliency Frame')
-                writer.grab_frame()
-                tstr = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start))
-                print('\ttime: {}'.format(tstr), end='\r')
-        print('\nfinished.')
-        """
-        f, ax = plt.subplots(2, 2)
-        f.tight_layout()
-
+        data_size = len(self.input_data)
+        logger.info(f'Explainer starts. Number of frame {data_size}')
         pool_size = len(self.hosts) + 1
         logger.info(f'Create thread pool size {pool_size}.')
         pool = ThreadPool(processes=pool_size)
         results = []
-
+        batch = []
+        results.append(batch)
+        start = get_time_mils() / 1000
         for i, s in enumerate(self.input_data):
             r = pool.apply_async(self.process_saliency_ffmpeg, args=(s, i,))
-            results.append(r)
+            if len(batch) < 8:
+                batch.append(r)
+            else:
+                batch = []
+                results.append(batch)
         logger.info(f'All jobs submitted, overlaying saliencies.')
 
-        with writer.saving(f, "experiments/" + movie_title_saliency, 400):
-            for i, r in enumerate(results):
-                s = self.input_data[i]
-                s_throttle, s_brake, s_steer = r.get()
-                logger.info(f'process frame {i + 1}...')
-                ax[0, 0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
-                ax[0, 0].set_title('Original Frame')
-                ax[0, 0].set_aspect('equal')
+        videos = []
+        for idx, batch in enumerate(results):
+            batch_movie = f'{idx}.mp4'
+            FFMpegWriter = animation.writers['ffmpeg']
+            metadata = dict(title=batch_movie, artist='Hephaestus', comment='carla saliency video.')
+            writer = FFMpegWriter(fps=8, metadata=metadata)
+            figure, ax = plt.subplots(2, 2)
+            figure.tight_layout()
+            video = f'experiments/{batch_movie}'
+            videos.append(video)
+            with writer.saving(figure, video, 400):
+                for i, r in enumerate(batch):
+                    s = self.input_data[i]
+                    s_throttle, s_brake, s_steer = r.get()
+                    ax[0, 0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
+                    ax[0, 0].set_title('Original Frame')
+                    ax[0, 0].set_aspect('equal')
 
-                ax[0, 1].imshow(cv2.cvtColor(s_throttle, cv2.COLOR_BGR2RGB))
-                ax[0, 1].set_title('Saliency Frame Throttle')
-                ax[0, 1].set_aspect('equal')
+                    ax[0, 1].imshow(cv2.cvtColor(s_throttle, cv2.COLOR_BGR2RGB))
+                    ax[0, 1].set_title('Saliency Frame Throttle')
+                    ax[0, 1].set_aspect('equal')
 
-                ax[1, 0].imshow(cv2.cvtColor(s_brake, cv2.COLOR_BGR2RGB))
-                ax[1, 0].set_title('Saliency Frame Brake')
-                ax[1, 0].set_aspect('equal')
+                    ax[1, 0].imshow(cv2.cvtColor(s_brake, cv2.COLOR_BGR2RGB))
+                    ax[1, 0].set_title('Saliency Frame Brake')
+                    ax[1, 0].set_aspect('equal')
 
-                ax[1, 1].imshow(cv2.cvtColor(s_steer, cv2.COLOR_BGR2RGB))
-                ax[1, 1].set_title('Saliency Frame Steer')
-                ax[1, 1].set_aspect('equal')
-                writer.grab_frame()
+                    ax[1, 1].imshow(cv2.cvtColor(s_steer, cv2.COLOR_BGR2RGB))
+                    ax[1, 1].set_title('Saliency Frame Steer')
+                    ax[1, 1].set_aspect('equal')
+                    writer.grab_frame()
+            logger.info(f'Saved temporary output {video}.')
+
+        end = get_time_mils() / 1000
+        print(f'Process {data_size} frames took {end - start}s. Estimate {int((end - start) / data_size)}s/frame.')
+
+        movie_title_saliency = f'experiments/original_saliency_compare_video_{int(get_time_mils())}_{timestamp()}.mp4'
+        video = cv2.VideoWriter(movie_title_saliency, cv2.VideoWriter_fourcc(*"mp4v"), 8, (2560, 1920))
+        for v in videos:
+            curr_v = cv2.VideoCapture(v)
+            while curr_v.isOpened():
+                r, frame = curr_v.read()
+                if not r:
+                    break
+                video.write(frame)
+        video.release()
+        logger.info(f'Created final video {movie_title_saliency}.')
+
+        for v in videos:
+            os.remove(v)
 
         logger.info('Explainer finished.')
         pool.close()
