@@ -5,7 +5,7 @@ import torch
 
 # split input into smaller sublist, one input might contain 1001 entries
 from explainer.explainer import Explainer
-from explainer.utils import logger
+from explainer.utils import logger, get_time_mils
 
 
 def split_data(start_index, n):
@@ -29,7 +29,10 @@ def run_all_ffmpeg_remote(config, data, hosts):
     image_agent = ImageAgent(config)
     data = torch.load(data)
     explainer = Explainer(image_agent, data, hosts)
+    start = get_time_mils() / 1000
     explainer.explain()
+    end = get_time_mils() / 1000
+    print(f'Process {len(data)} took {end - start}s. Estimate {int((end - start)/len(data))}s/frame.')
 
 
 def run_analzyse_data_set(config, data):

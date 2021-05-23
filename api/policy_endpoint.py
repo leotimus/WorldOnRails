@@ -2,6 +2,7 @@ import io
 import os
 
 import flask
+import numpy
 import torch
 from flask import request, make_response
 
@@ -16,9 +17,9 @@ image_agent = ImageAgent('saved_model/nocrash/config_nocrash.yaml')
 explainer = Explainer(image_agent, [], [])
 
 if os.cpu_count() >= 8:
-    num_threads = (os.cpu_count() - 2) / 2
-    logger.info(f'Setting pytorch to use {num_threads} cpus.')
-    torch.set_num_threads(int(num_threads))
+    num_threads = round(os.cpu_count() / 3 - 1)
+    logger.info(f'Setting pytorch to use 3 cpus. Can run {num_threads} processes parallel')
+    torch.set_num_threads(3)
 
 
 @app.route('/agent/policy', methods=['POST'])
@@ -27,7 +28,13 @@ def policy():
     index = request.headers.get('index')
     buffer = io.BytesIO(data)
     frame = torch.load(buffer)
-    throttle, brake, steer = explainer.create_and_save_saliency_ffmpeg(frame, int(index))
+    try:
+        throttle, brake, steer = explainer.create_and_save_saliency_ffmpeg(frame, int(index))
+    except Exception as error:
+        logger.error(f'Got exception, return empty result', error)
+        throttle = numpy.empty(shape=[4, 3])
+        brake = numpy.empty(shape=[4])
+        steer = numpy.empty(shape=[4, 9])
     saliency = torch.tensor([throttle, brake, steer])
     buffer = io.BytesIO()
     torch.save(saliency, buffer)

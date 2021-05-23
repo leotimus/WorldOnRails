@@ -5,6 +5,7 @@ from multiprocessing import Queue
 from multiprocessing.pool import ThreadPool
 
 import cv2
+import numpy
 import numpy as np
 import pytz
 import skimage
@@ -31,9 +32,9 @@ class Explainer:
         for host in self.hosts:
             self.explainers.put(host)
         if os.cpu_count() >= 8:
-            num_threads = (os.cpu_count() - 2) / 2
-            logger.info(f'Setting pytorch to use {num_threads} cpus.')
-            torch.set_num_threads(int(num_threads))
+            num_threads = round(os.cpu_count()/3 - 1)
+            logger.info(f'Setting pytorch to use 3 cpus. Can run {num_threads} processes parallel')
+            torch.set_num_threads(3)
 
     def explain(self):
         # f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
@@ -70,6 +71,7 @@ class Explainer:
             r = pool.apply_async(self.process_saliency_ffmpeg, args=(s, i,))
             results.append(r)
 
+        logger.info(f'All jobs submitted, overlaying saliencies.')
         with writer.saving(f, "experiments/" + movie_title_saliency, 400):
             for i, r in enumerate(results):
                 s = self.input_data[i]
@@ -98,12 +100,18 @@ class Explainer:
 
     def process_saliency_ffmpeg(self, s: ImageAgentSaliency, idx: int):
         explainer = self.explainers.get(block=True)
-        if explainer == 'memory':
-            logger.info(f'Submit frame {idx + 1} to local memory explainer.')
-            throttle, brake, steer = self.create_and_save_saliency_ffmpeg(s, idx)
-        else:
-            logger.info(f'Submit frame {idx + 1} to remote explainer at {explainer}.')
-            throttle, brake, steer = RemoteExplainer(explainer).create_and_save_saliency_ffmpeg(s, idx)
+        try:
+            if explainer == 'memory':
+                logger.info(f'Submit frame {idx + 1} to local memory explainer.')
+                throttle, brake, steer = self.create_and_save_saliency_ffmpeg(s, idx)
+            else:
+                logger.info(f'Submit frame {idx + 1} to remote explainer at {explainer}.')
+                throttle, brake, steer = RemoteExplainer(explainer).create_and_save_saliency_ffmpeg(s, idx)
+        except Exception as error:
+            logger.error(f'Frame {idx} was broken due to error.', error)
+            throttle = numpy.empty(shape=[4, 3])
+            brake = numpy.empty(shape=[4])
+            steer = numpy.empty(shape=[4, 9])
         self.explainers.put(explainer)
         return throttle, brake, steer
 
