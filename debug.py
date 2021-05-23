@@ -53,5 +53,5 @@ if __name__ == '__main__':
     # run_analzyse_data_set('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409.data')
     # run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/data_01/flush_1620568574409_200_2.data')
     run_all_ffmpeg_remote('saved_model/nocrash/config_nocrash.yaml',
-                          'experiments/data_01/flush_1620568574409_200_60.data',
+                          'experiments/data_01/flush_1620568574409_200_240.data',
                           read_hosts())

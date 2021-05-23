@@ -74,9 +74,9 @@ class Explainer:
 
         with writer.saving(f, "experiments/" + movie_title_saliency, 400):
             for i, r in enumerate(results):
-                logger.info(f'process frame {i}...')
                 s = self.input_data[i]
                 s_throttle, s_brake, s_steer = r.get()
+                logger.info(f'process frame {i + 1}...')
                 ax[0, 0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
                 ax[0, 0].set_title('Original Frame')
                 ax[0, 0].set_aspect('equal')
