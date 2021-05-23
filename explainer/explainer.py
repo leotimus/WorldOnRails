@@ -31,18 +31,18 @@ class Explainer:
         self.explainers = Queue()
         for host in self.hosts:
             self.explainers.put(host)
-        if os.cpu_count() >= 8:
-            num_threads = round(os.cpu_count()/3 - 1)
-            logger.info(f'Setting pytorch to use 3 cpus. Can run {num_threads} processes parallel')
-            torch.set_num_threads(3)
+        cpu_count = os.cpu_count()
+        if cpu_count >= 8:
+            num_threads = (cpu_count - 2) / 2
+            logger.info(f'Setting pytorch to use {num_threads} cpus per process.')
+            torch.set_num_threads(int(num_threads))
 
     def explain(self):
         # f'experiments/original_throttle_{int(round(time.time() * 1000))}_video_{time_stamp}.avi'
         logger.info(f'Explainer starts. Number of frame {len(self.input_data)}')
-        movie_title_saliency = "original_saliency_compare_video_{}_{}.mp4".format(int(round(time.time() * 1000)),
-                                                                                  timestamp())
+        movie_title_saliency = f'original_saliency_compare_video_{int(get_time_mils())}_{timestamp()}.mp4'
         FFMpegWriter = animation.writers['ffmpeg']
-        metadata = dict(title=movie_title_saliency, artist='greydanus', comment='atari-saliency-video')
+        metadata = dict(title=movie_title_saliency, artist='Hephaestus', comment='carla saliency video.')
         writer = FFMpegWriter(fps=8, metadata=metadata)
         # Setup for Original grame and underneath Saliency Frame of one feature
         """
@@ -70,10 +70,11 @@ class Explainer:
         for i, s in enumerate(self.input_data):
             r = pool.apply_async(self.process_saliency_ffmpeg, args=(s, i,))
             results.append(r)
-
         logger.info(f'All jobs submitted, overlaying saliencies.')
+
         with writer.saving(f, "experiments/" + movie_title_saliency, 400):
             for i, r in enumerate(results):
+                logger.info(f'process frame {i}...')
                 s = self.input_data[i]
                 s_throttle, s_brake, s_steer = r.get()
                 ax[0, 0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))

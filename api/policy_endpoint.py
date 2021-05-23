@@ -16,10 +16,11 @@ app.config["DEBUG"] = True
 image_agent = ImageAgent('saved_model/nocrash/config_nocrash.yaml')
 explainer = Explainer(image_agent, [], [])
 
-if os.cpu_count() >= 8:
-    num_threads = round(os.cpu_count() / 3 - 1)
-    logger.info(f'Setting pytorch to use 3 cpus. Can run {num_threads} processes parallel')
-    torch.set_num_threads(3)
+cpu_count = os.cpu_count()
+if cpu_count >= 8:
+    num_threads = (cpu_count - 2) / 2
+    logger.info(f'Setting pytorch to use {num_threads} cpus per process.')
+    torch.set_num_threads(int(num_threads))
 
 
 @app.route('/agent/policy', methods=['POST'])
