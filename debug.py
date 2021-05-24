@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # split_data(800, 120)
     # run_all('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409_970_1.data')
     # run_analzyse_data_set('saved_model/nocrash/config_nocrash.yaml', 'experiments/flush_1620568574409.data')
-    # run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/data_01/flush_1620568574409_200_2.data')
-    run_all_ffmpeg_remote('saved_model/nocrash/config_nocrash.yaml',
-                          'experiments/flush_1620568578861.data',
-                          read_hosts())
+    run_all_ffmpeg('saved_model/nocrash/config_nocrash.yaml', 'experiments/data_01/flush_1620568574409_970_24.data')
+    # run_all_ffmpeg_remote('saved_model/nocrash/config_nocrash.yaml',
+    #                       'experiments/flush_1620568578861.data',
+    #                       read_hosts())

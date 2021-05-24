@@ -21,6 +21,7 @@ from autoagents.image_agent_saliency import ImageAgentSaliency
 from explainer.remote_explainer import RemoteExplainer
 from explainer.utils import get_time_mils, logger, timestamp
 
+BATCH_SIZE = 8
 
 class Explainer:
     def __init__(self, agent: ImageAgent, input_data: list, hosts: list):
@@ -28,6 +29,9 @@ class Explainer:
         self.input_data = input_data
         self.hosts = hosts
         self.explainers = Queue()
+        if len(self.hosts) == 0:
+            self.hosts.append('memory')
+            self.hosts.append('memory')
         for host in self.hosts:
             self.explainers.put(host)
         cpu_count = os.cpu_count()
@@ -49,7 +53,7 @@ class Explainer:
         start = get_time_mils() / 1000
         for i, s in enumerate(self.input_data):
             r = pool.apply_async(self.process_saliency_ffmpeg, args=(s, i,))
-            if len(batch) < 8:
+            if len(batch) < BATCH_SIZE:
                 batch.append(r)
             else:
                 batch = []
@@ -57,6 +61,7 @@ class Explainer:
         logger.info(f'All jobs submitted, overlaying saliencies.')
 
         videos = []
+
         for idx, batch in enumerate(results):
             batch_movie = f'{idx}.mp4'
             FFMpegWriter = animation.writers['ffmpeg']
@@ -68,7 +73,7 @@ class Explainer:
             videos.append(video)
             with writer.saving(figure, video, 400):
                 for i, r in enumerate(batch):
-                    s = self.input_data[i]
+                    s = self.input_data[idx * BATCH_SIZE + i]
                     s_throttle, s_brake, s_steer = r.get()
                     ax[0, 0].imshow(cv2.cvtColor(s.wide_rgb, cv2.COLOR_BGR2RGB))
                     ax[0, 0].set_title('Original Frame')
